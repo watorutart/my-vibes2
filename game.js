@@ -65,27 +65,105 @@ class DragonQuest {
                 { name: 'やくそう', effect: 'heal', power: 30, price: 24, description: 'HPを30回復する' },
                 { name: 'どくけしそう', effect: 'poison_cure', power: 1, price: 10, description: '毒を治す' },
                 { name: 'せいすい', effect: 'curse_cure', power: 1, price: 20, description: '呪いを解く' },
-                { name: 'マホウのカギ', effect: 'key', power: 1, price: 0, description: '魔法の扉を開く' }
+                { name: 'マホウのカギ', effect: 'key', power: 1, price: 0, description: '魔法の扉を開く' },
+                { name: 'いのりのねんど', effect: 'mp_heal', power: 20, price: 40, description: 'MPを20回復する' },
+                { name: 'せかいじゅ', effect: 'full_heal', power: 999, price: 500, description: 'HPを完全回復' }
             ]
         };
         
         this.spells = [
             { name: 'ホイミ', mp: 3, effect: 'heal', power: 30, level: 3, description: 'HPを回復する' },
             { name: 'ギラ', mp: 3, effect: 'damage', power: 15, level: 4, description: '敵に炎のダメージ' },
+            { name: 'ラリホー', mp: 2, effect: 'sleep', power: 1, level: 6, description: '敵を眠らせる' },
             { name: 'リレミト', mp: 8, effect: 'escape', power: 1, level: 7, description: 'ダンジョンから脱出' },
             { name: 'ベギラマ', mp: 5, effect: 'damage', power: 30, level: 10, description: 'より強い炎のダメージ' },
-            { name: 'ラリホー', mp: 2, effect: 'sleep', power: 1, level: 6, description: '敵を眠らせる' }
+            { name: 'ベホイミ', mp: 7, effect: 'heal', power: 85, level: 17, description: '大幅にHPを回復' },
+            { name: 'ドラゴラム', mp: 15, effect: 'damage', power: 65, level: 26, description: '魔王を倒す炎の呂' }
         ];
         
         this.learnedSpells = [];
         
+        this.gameData = {
+            currentMap: 'village',
+            questFlags: {
+                metKing: false,
+                rescuedPrincess: false,
+                hasBridge: false,
+                defeatedDragonLord: false
+            }
+        };
+        
+        this.maps = {
+            village: {
+                name: 'ラダトームの村',
+                bgClass: 'village-bg',
+                exits: [
+                    { x: 400, y: 50, target: 'castle', text: 'ラダトーム城へ' },
+                    { x: 50, y: 200, target: 'cave', text: '洞窟へ' }
+                ],
+                npcs: [
+                    { x: 200, y: 100, message: '「ここはラダトームの村です。」', type: 'villager' },
+                    { x: 150, y: 150, message: '「いらっしゃいませ！武器をお売りしております。」', type: 'weapon_shop' },
+                    { x: 300, y: 150, message: '「いらっしゃいませ！防具をお売りしております。」', type: 'armor_shop' },
+                    { x: 250, y: 200, message: '「いらっしゃいませ！道具をお売りしております。」', type: 'item_shop' },
+                    { x: 350, y: 100, message: '「いらっしゃいませ！お疑れでしょう。」', type: 'inn' }
+                ]
+            },
+            castle: {
+                name: 'ラダトーム城',
+                bgClass: 'castle-bg',
+                exits: [
+                    { x: 400, y: 250, target: 'village', text: '村へ戻る' }
+                ],
+                npcs: [
+                    { x: 250, y: 100, message: '「勇者よ、よく来た。王女を救ってくれ！」', type: 'king' },
+                    { x: 200, y: 150, message: '「王女は竜王にさらわれてしまいました。」', type: 'villager' }
+                ]
+            },
+            cave: {
+                name: '洞窟',
+                bgClass: 'cave-bg',
+                exits: [
+                    { x: 50, y: 250, target: 'village', text: '村へ戻る' },
+                    { x: 400, y: 100, target: 'dragonlord_castle', text: '竜王の城へ' }
+                ],
+                npcs: [
+                    { x: 300, y: 100, message: '「ここは危険な洞窟だ。気をつけろ。」', type: 'villager' }
+                ]
+            },
+            dragonlord_castle: {
+                name: '竜王の城',
+                bgClass: 'cave-bg',
+                exits: [
+                    { x: 50, y: 250, target: 'cave', text: '洞窟へ戻る' }
+                ],
+                npcs: [
+                    { x: 250, y: 100, message: '「勇者よ、ついに来たな。」', type: 'dragonlord' },
+                    { x: 200, y: 150, message: '「勇者様、助けて！」', type: 'princess' }
+                ]
+            }
+        };
+        
         this.initGame();
         this.setupControls();
-        this.spawnEnemies();
-        this.spawnNPCs();
+        this.loadMap(this.gameData.currentMap);
     }
     
     initGame() {
+        if (localStorage.getItem('dragonquest_save')) {
+            this.showDialog(
+                'セーブデータがあります。<br><br>続きから始めますか？',
+                [
+                    { text: '続きから', action: () => this.continueGame() },
+                    { text: '新しいゲーム', action: () => this.startNewGame() }
+                ]
+            );
+        } else {
+            this.startNewGame();
+        }
+    }
+    
+    startNewGame() {
         this.player.inventory.push(this.items.consumables[0]);
         this.player.inventory.push(this.items.consumables[0]);
         this.updateStatus();
@@ -93,6 +171,14 @@ class DragonQuest {
             { text: 'はい', action: () => this.closeDialog() },
             { text: 'いいえ', action: () => this.showDialog('そんなことを言わずに...', [{ text: 'はい', action: () => this.closeDialog() }]) }
         ]);
+    }
+    
+    continueGame() {
+        if (this.loadGame()) {
+            this.showDialog('ゲームをロードしました。', [{ text: 'つづける', action: () => this.closeDialog() }]);
+        } else {
+            this.startNewGame();
+        }
     }
     
     setupControls() {
@@ -174,9 +260,34 @@ class DragonQuest {
                     this.openArmorShop();
                 } else if (npc.type === 'item_shop') {
                     this.openItemShop();
+                } else if (npc.type === 'inn') {
+                    this.openInn();
+                } else if (npc.type === 'king') {
+                    this.talkToKing();
+                } else if (npc.type === 'dragonlord') {
+                    this.fightDragonLord();
+                } else if (npc.type === 'princess') {
+                    this.rescuePrincess();
                 } else {
                     this.showDialog(npc.message, [{ text: 'はい', action: () => this.closeDialog() }]);
                 }
+            }
+        });
+        
+        this.exitPoints.forEach(exit => {
+            const distance = Math.sqrt(
+                Math.pow(this.player.x - exit.x, 2) + 
+                Math.pow(this.player.y - exit.y, 2)
+            );
+            
+            if (distance < 30) {
+                this.showDialog(
+                    `${exit.text}に移動しますか？`,
+                    [
+                        { text: 'はい', action: () => this.moveToMap(exit.target) },
+                        { text: 'いいえ', action: () => this.closeDialog() }
+                    ]
+                );
             }
         });
     }
@@ -228,39 +339,60 @@ class DragonQuest {
         }
     }
     
-    spawnNPCs() {
+    loadMap(mapName) {
+        this.gameData.currentMap = mapName;
+        const map = this.maps[mapName];
         const mapArea = document.getElementById('mapArea');
-        const mapRect = mapArea.getBoundingClientRect();
         
-        const npcData = [
-            { message: '「装備を整えてから冒険に出かけましょう！」', type: 'villager' },
-            { message: '「魔王の城は遥か北にあると聞いています。」', type: 'villager' },
-            { message: '「レベルを上げてから強い敵と戦いなさい。」', type: 'villager' },
-            { message: '「いらっしゃいませ！武器をお売りしております。」', type: 'weapon_shop' },
-            { message: '「いらっしゃいませ！防具をお売りしております。」', type: 'armor_shop' },
-            { message: '「いらっしゃいませ！道具をお売りしております。」', type: 'item_shop' }
-        ];
+        mapArea.innerHTML = '<div id="player"></div>';
+        mapArea.className = map.bgClass;
         
-        for (let i = 0; i < 6; i++) {
+        this.npcs = [];
+        this.fieldEnemies = [];
+        this.exitPoints = [];
+        
+        map.npcs.forEach(npcData => {
             const npcElement = document.createElement('div');
             npcElement.className = 'npc';
-            
-            const x = Math.random() * (mapRect.width - 50) + 25;
-            const y = Math.random() * (mapRect.height - 50) + 25;
-            
-            npcElement.style.left = x + 'px';
-            npcElement.style.top = y + 'px';
-            
+            npcElement.style.left = npcData.x + 'px';
+            npcElement.style.top = npcData.y + 'px';
             mapArea.appendChild(npcElement);
             
             this.npcs.push({
                 element: npcElement,
-                x: x,
-                y: y,
-                message: npcData[i].message,
-                type: npcData[i].type
+                x: npcData.x,
+                y: npcData.y,
+                message: npcData.message,
+                type: npcData.type
             });
+        });
+        
+        map.exits.forEach(exitData => {
+            const exitElement = document.createElement('div');
+            exitElement.className = 'exit-point';
+            exitElement.style.left = exitData.x + 'px';
+            exitElement.style.top = exitData.y + 'px';
+            exitElement.title = exitData.text;
+            mapArea.appendChild(exitElement);
+            
+            this.exitPoints.push({
+                element: exitElement,
+                x: exitData.x,
+                y: exitData.y,
+                target: exitData.target,
+                text: exitData.text
+            });
+        });
+        
+        if (mapName !== 'castle') {
+            this.spawnEnemies();
         }
+        
+        this.player.x = 250;
+        this.player.y = 150;
+        const playerElement = document.getElementById('player');
+        playerElement.style.left = this.player.x + 'px';
+        playerElement.style.top = this.player.y + 'px';
     }
     
     startBattle(enemy) {
@@ -285,12 +417,19 @@ class DragonQuest {
         let battleText = `勇者の攻撃！<br>${this.currentEnemy.name}に${damage}のダメージ！<br><br>`;
         
         if (this.currentEnemy.hp <= 0) {
-            battleText += `${this.currentEnemy.name}を倒した！<br>`;
-            battleText += `経験値${this.currentEnemy.exp}を獲得！<br>`;
-            battleText += `${this.currentEnemy.gold}ゴールドを手に入れた！`;
+            if (this.currentEnemy.name === 'ドラゴンロード') {
+                this.gameData.questFlags.defeatedDragonLord = true;
+                battleText += `${this.currentEnemy.name}を倒した！<br>`;
+                battleText += `世界に平和が戻った！<br>`;
+                battleText += `経験値${this.currentEnemy.exp}を獲得！`;
+            } else {
+                battleText += `${this.currentEnemy.name}を倒した！<br>`;
+                battleText += `経験値${this.currentEnemy.exp}を獲得！<br>`;
+                battleText += `${this.currentEnemy.gold}ゴールドを手に入れた！`;
+                this.player.gold += this.currentEnemy.gold;
+            }
             
             this.player.exp += this.currentEnemy.exp;
-            this.player.gold += this.currentEnemy.gold;
             
             this.checkLevelUp();
             this.endBattle();
@@ -357,10 +496,7 @@ class DragonQuest {
             this.player.attack = this.getTotalAttack();
             this.player.defense = this.getTotalDefense();
             
-            if (this.player.level === 3 && !this.learnedSpells.includes('ホイミ')) {
-                this.learnedSpells.push('ホイミ');
-                this.showDialog(`ホイミを覚えた。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
-            }
+            this.checkSpellLearning();
             
             this.showDialog(
                 `レベルアップ！<br>` +
@@ -447,6 +583,19 @@ class DragonQuest {
         document.getElementById('gold').textContent = this.player.gold;
     }
     
+    checkSpellLearning() {
+        const spellsToLearn = this.spells.filter(spell => 
+            spell.level <= this.player.level && 
+            !this.learnedSpells.includes(spell.name)
+        );
+        
+        if (spellsToLearn.length > 0) {
+            const newSpell = spellsToLearn[0];
+            this.learnedSpells.push(newSpell.name);
+            this.showDialog(`${newSpell.name}を覚えた！`, [{ text: 'つづける', action: () => this.closeDialog() }]);
+        }
+    }
+    
     getTotalAttack() {
         let attack = this.player.baseAttack;
         if (this.player.weapon) {
@@ -487,6 +636,12 @@ class DragonQuest {
         if (item.effect === 'heal') {
             this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.power);
             this.showDialog(`${item.name}を使った。<br>HPが${item.power}回復した。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
+        } else if (item.effect === 'mp_heal') {
+            this.player.mp = Math.min(this.player.maxMp, this.player.mp + item.power);
+            this.showDialog(`${item.name}を使った。<br>MPが${item.power}回復した。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
+        } else if (item.effect === 'full_heal') {
+            this.player.hp = this.player.maxHp;
+            this.showDialog(`${item.name}を使った。<br>HPが完全回復した。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
         } else if (item.effect === 'poison_cure') {
             this.showDialog(`${item.name}を使った。<br>毒が治った。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
         } else if (item.effect === 'curse_cure') {
@@ -621,12 +776,19 @@ class DragonQuest {
             let battleText = `${spell.name}を唱えた。<br>${this.currentEnemy.name}に${spell.power}のダメージ。<br><br>`;
             
             if (this.currentEnemy.hp <= 0) {
-                battleText += `${this.currentEnemy.name}を倒した！<br>`;
-                battleText += `経験値${this.currentEnemy.exp}を獲得！<br>`;
-                battleText += `${this.currentEnemy.gold}ゴールドを手に入れた！`;
+                if (this.currentEnemy.name === 'ドラゴンロード') {
+                    this.gameData.questFlags.defeatedDragonLord = true;
+                    battleText += `${this.currentEnemy.name}を倒した！<br>`;
+                    battleText += `世界に平和が戻った！<br>`;
+                    battleText += `経験値${this.currentEnemy.exp}を獲得！`;
+                } else {
+                    battleText += `${this.currentEnemy.name}を倒した！<br>`;
+                    battleText += `経験値${this.currentEnemy.exp}を獲得！<br>`;
+                    battleText += `${this.currentEnemy.gold}ゴールドを手に入れた！`;
+                    this.player.gold += this.currentEnemy.gold;
+                }
                 
                 this.player.exp += this.currentEnemy.exp;
-                this.player.gold += this.currentEnemy.gold;
                 
                 this.checkLevelUp();
                 this.endBattle();
@@ -669,6 +831,12 @@ class DragonQuest {
         if (item.effect === 'heal') {
             this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.power);
             this.showDialog(`${item.name}を使った。<br>HPが${item.power}回復した。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
+        } else if (item.effect === 'mp_heal') {
+            this.player.mp = Math.min(this.player.maxMp, this.player.mp + item.power);
+            this.showDialog(`${item.name}を使った。<br>MPが${item.power}回復した。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
+        } else if (item.effect === 'full_heal') {
+            this.player.hp = this.player.maxHp;
+            this.showDialog(`${item.name}を使った。<br>HPが完全回復した。`, [{ text: 'つづける', action: () => this.closeDialog() }]);
         }
         
         const index = this.player.inventory.indexOf(item);
@@ -866,6 +1034,172 @@ class DragonQuest {
     closeShop() {
         this.gameState = 'field';
         document.getElementById('shopDialog').style.display = 'none';
+    }
+    
+    openInn() {
+        this.gameState = 'shop';
+        let innText = '宿屋へようこそ！<br><br>今夜はお疑れでしょうか？<br><br>一泊6ゴールドです。';
+        
+        const canAfford = this.player.gold >= 6;
+        const options = [
+            { 
+                text: `泊まる (6G)${canAfford ? '' : ' (お金が足りません)'}`, 
+                action: canAfford ? () => this.stayAtInn() : null 
+            },
+            { text: 'セーブする', action: () => this.saveGame() },
+            { text: 'やめる', action: () => this.closeShop() }
+        ];
+        
+        this.showShopDialog(innText, options);
+    }
+    
+    stayAtInn() {
+        if (this.player.gold < 6) {
+            this.showShopDialog('お金が足りません。', [{ text: '戻る', action: () => this.openInn() }]);
+            return;
+        }
+        
+        this.player.gold -= 6;
+        this.player.hp = this.player.maxHp;
+        this.player.mp = this.player.maxMp;
+        
+        this.updateStatus();
+        
+        this.showShopDialog(
+            'おやすみなさい。<br><br>HPとMPが完全回復しました。',
+            [{ text: 'つづける', action: () => this.closeShop() }]
+        );
+    }
+    
+    saveGame() {
+        const saveData = {
+            player: this.player,
+            gameData: this.gameData,
+            learnedSpells: this.learnedSpells
+        };
+        
+        localStorage.setItem('dragonquest_save', JSON.stringify(saveData));
+        
+        this.showShopDialog(
+            'ゲームをセーブしました。',
+            [{ text: 'つづける', action: () => this.openInn() }]
+        );
+    }
+    
+    loadGame() {
+        const saveData = localStorage.getItem('dragonquest_save');
+        if (saveData) {
+            const data = JSON.parse(saveData);
+            this.player = data.player;
+            this.gameData = data.gameData || this.gameData;
+            this.learnedSpells = data.learnedSpells || [];
+            
+            const playerElement = document.getElementById('player');
+            playerElement.style.left = this.player.x + 'px';
+            playerElement.style.top = this.player.y + 'px';
+            
+            this.updateStatus();
+            return true;
+        }
+        return false;
+    }
+    
+    moveToMap(targetMap) {
+        this.loadMap(targetMap);
+        this.closeDialog();
+    }
+    
+    talkToKing() {
+        if (!this.gameData.questFlags.metKing) {
+            this.gameData.questFlags.metKing = true;
+            this.showDialog(
+                '「勇者よ、よく来た。<br><br>' +
+                '悪の竜王ドラゴンロードが、<br>' +
+                'わが姫ローラをさらっていった。<br><br>' +
+                '竜王を倒し、姫を救ってくれ！」',
+                [{ text: 'はい', action: () => this.closeDialog() }]
+            );
+        } else if (this.gameData.questFlags.rescuedPrincess) {
+            this.showDialog(
+                '「よくやった！姫を救ってくれたのか！<br><br>' +
+                'おまえこそ真の勇者だ！」',
+                [{ text: 'はい', action: () => this.closeDialog() }]
+            );
+        } else {
+            this.showDialog(
+                '「竜王の城は遠く南にある。<br>' +
+                '気をつけて行くのだぞ。」',
+                [{ text: 'はい', action: () => this.closeDialog() }]
+            );
+        }
+    }
+    
+    fightDragonLord() {
+        if (this.gameData.questFlags.defeatedDragonLord) {
+            this.showDialog(
+                '「もうドラゴンロードは倒した。」',
+                [{ text: 'はい', action: () => this.closeDialog() }]
+            );
+            return;
+        }
+        
+        this.showDialog(
+            '「勇者よ、ついに来たな。<br><br>' +
+            'わしが名はドラゴンロード！<br>' +
+            'この世を支配する者だ！<br><br>' +
+            'そなたもわしの仲間にならないか？」',
+            [
+                { text: 'いいえ', action: () => this.battleDragonLord() },
+                { text: 'はい', action: () => this.joinDragonLord() }
+            ]
+        );
+    }
+    
+    battleDragonLord() {
+        const dragonlord = this.enemies.find(e => e.name === 'ドラゴンロード');
+        this.startBattle({ ...dragonlord });
+    }
+    
+    joinDragonLord() {
+        this.showDialog(
+            '「さあ、共にこの世を支配しようぞ！」<br><br>' +
+            'BAD END - 勇者は闇の世界を選んだ...',
+            [{ text: '最初から', action: () => location.reload() }]
+        );
+    }
+    
+    rescuePrincess() {
+        if (this.gameData.questFlags.defeatedDragonLord && !this.gameData.questFlags.rescuedPrincess) {
+            this.gameData.questFlags.rescuedPrincess = true;
+            this.showDialog(
+                '「勇者様！ありがとうございます！<br><br>' +
+                'あなたのおかげで助かりました。<br><br>' +
+                '一緒にお城に帰りましょう。」',
+                [{ text: 'はい', action: () => this.gameEnding() }]
+            );
+        } else if (this.gameData.questFlags.rescuedPrincess) {
+            this.gameEnding();
+        } else {
+            this.showDialog(
+                '「勇者様、危険です！<br>' +
+                'まずドラゴンロードを倒してください！」',
+                [{ text: 'はい', action: () => this.closeDialog() }]
+            );
+        }
+    }
+    
+    gameEnding() {
+        this.showDialog(
+            '「おめでとう！」<br><br>' +
+            '勇者はドラゴンロードを倒し、<br>' +
+            'ローラ姫を救出しました！<br><br>' +
+            '世界に平和が戻りました。<br><br>' +
+            'GAME CLEAR!',
+            [
+                { text: '新しいゲーム', action: () => location.reload() },
+                { text: '続ける', action: () => this.closeDialog() }
+            ]
+        );
     }
 }
 
