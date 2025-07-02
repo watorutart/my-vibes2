@@ -18,7 +18,9 @@ class SuperMarioBros {
             facing: 'right',
             state: 'small', // small, big, fire
             invulnerable: false,
-            invulnerableTime: 0
+            invulnerableTime: 0,
+            ducking: false,
+            walking: false
         };
         
         this.camera = {
@@ -36,6 +38,8 @@ class SuperMarioBros {
         this.enemies = [];
         this.powerups = [];
         this.coins = [];
+        this.fireballs = [];
+        this.flagpole = null;
         
         this.score = 0;
         this.lives = 3;
@@ -64,8 +68,13 @@ class SuperMarioBros {
         document.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
             // Prevent default for arrow keys and WASD
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'x'].includes(e.key)) {
                 e.preventDefault();
+            }
+            
+            // Fireball shooting
+            if (e.key.toLowerCase() === 'x' && this.mario.state === 'fire') {
+                this.shootFireball();
             }
         });
         
@@ -123,6 +132,21 @@ class SuperMarioBros {
         
         // Powerups (hidden in question blocks)
         // We'll spawn these when blocks are hit
+        
+        // Coins scattered throughout level
+        this.createCoin(200, this.gameHeight - 150);
+        this.createCoin(450, this.gameHeight - 280);
+        this.createCoin(500, this.gameHeight - 280);
+        this.createCoin(550, this.gameHeight - 280);
+        this.createCoin(700, this.gameHeight - 150);
+        this.createCoin(950, this.gameHeight - 180);
+        this.createCoin(1050, this.gameHeight - 150);
+        this.createCoin(1300, this.gameHeight - 250);
+        this.createCoin(1400, this.gameHeight - 400);
+        this.createCoin(1500, this.gameHeight - 400);
+        
+        // Goal flagpole at end of level
+        this.createFlagpole(3200, this.gameHeight - 300);
         
         this.createClouds();
         this.createHills();
@@ -241,6 +265,79 @@ class SuperMarioBros {
         document.getElementById('gameContainer').appendChild(powerupElement);
     }
     
+    createCoin(x, y) {
+        const coin = {
+            x: x,
+            y: y,
+            width: 20,
+            height: 20,
+            active: true
+        };
+        
+        this.coins.push(coin);
+        
+        const coinElement = document.createElement('div');
+        coinElement.className = 'coin';
+        coinElement.style.left = x + 'px';
+        coinElement.style.top = y + 'px';
+        coinElement.id = `coin_${this.coins.length}`;
+        
+        document.getElementById('gameContainer').appendChild(coinElement);
+    }
+    
+    createFlagpole(x, y) {
+        this.flagpole = {
+            x: x,
+            y: y,
+            width: 8,
+            height: 300,
+            flagY: y + 20
+        };
+        
+        // Create flagpole
+        const poleElement = document.createElement('div');
+        poleElement.className = 'flagpole';
+        poleElement.style.left = x + 'px';
+        poleElement.style.top = y + 'px';
+        poleElement.style.height = '300px';
+        poleElement.id = 'flagpole';
+        
+        // Create flag
+        const flagElement = document.createElement('div');
+        flagElement.className = 'flag';
+        flagElement.style.left = (x + 8) + 'px';
+        flagElement.style.top = (y + 20) + 'px';
+        flagElement.id = 'flag';
+        
+        document.getElementById('gameContainer').appendChild(poleElement);
+        document.getElementById('gameContainer').appendChild(flagElement);
+    }
+    
+    shootFireball() {
+        if (this.fireballs.length >= 2) return; // Limit fireballs
+        
+        const fireball = {
+            x: this.mario.x + (this.mario.facing === 'right' ? this.mario.width : -16),
+            y: this.mario.y + this.mario.height / 2,
+            width: 16,
+            height: 16,
+            velocityX: this.mario.facing === 'right' ? 8 : -8,
+            velocityY: -3,
+            bounces: 0,
+            active: true
+        };
+        
+        this.fireballs.push(fireball);
+        
+        const fireballElement = document.createElement('div');
+        fireballElement.className = 'fireball';
+        fireballElement.style.left = fireball.x + 'px';
+        fireballElement.style.top = fireball.y + 'px';
+        fireballElement.id = `fireball_${this.fireballs.length}`;
+        
+        document.getElementById('gameContainer').appendChild(fireballElement);
+    }
+    
     createClouds() {
         const clouds = [
             {x: 200, y: 100, width: 64, height: 32},
@@ -283,21 +380,33 @@ class SuperMarioBros {
     }
     
     updateMario() {
+        // Handle ducking
+        this.mario.ducking = (this.keys['s'] || this.keys['arrowdown']) && this.mario.onGround;
+        
         // Handle input
-        if (this.keys['a'] || this.keys['arrowleft']) {
-            this.mario.velocityX = -this.mario.speed;
-            this.mario.facing = 'left';
-        } else if (this.keys['d'] || this.keys['arrowright']) {
-            this.mario.velocityX = this.mario.speed;
-            this.mario.facing = 'right';
+        if (!this.mario.ducking) {
+            if (this.keys['a'] || this.keys['arrowleft']) {
+                this.mario.velocityX = -this.mario.speed;
+                this.mario.facing = 'left';
+                this.mario.walking = true;
+            } else if (this.keys['d'] || this.keys['arrowright']) {
+                this.mario.velocityX = this.mario.speed;
+                this.mario.facing = 'right';
+                this.mario.walking = true;
+            } else {
+                this.mario.velocityX *= 0.8; // Friction
+                this.mario.walking = false;
+            }
         } else {
-            this.mario.velocityX *= 0.8; // Friction
+            this.mario.velocityX = 0;
+            this.mario.walking = false;
         }
         
         // Jump
-        if ((this.keys['w'] || this.keys['arrowup']) && this.mario.onGround) {
+        if ((this.keys['w'] || this.keys['arrowup']) && this.mario.onGround && !this.mario.ducking) {
             this.mario.velocityY = -this.mario.jumpPower;
             this.mario.onGround = false;
+            this.mario.walking = false;
         }
         
         // Apply gravity
@@ -357,6 +466,10 @@ class SuperMarioBros {
                     if (block.type === 'question' && !block.hit) {
                         this.hitQuestionBlock(block);
                     }
+                    // Break brick block if big/fire mario
+                    else if (block.type === 'brick' && this.mario.state !== 'small') {
+                        this.breakBrick(block);
+                    }
                 }
             }
         });
@@ -407,6 +520,17 @@ class SuperMarioBros {
         this.addScore(200);
     }
     
+    breakBrick(block) {
+        block.active = false;
+        const blockIndex = this.blocks.indexOf(block);
+        const blockElement = document.getElementById(`block_${blockIndex + 1}`);
+        if (blockElement) {
+            blockElement.style.display = 'none';
+        }
+        
+        this.addScore(50);
+    }
+    
     updateMarioDOM() {
         const marioElement = document.getElementById('mario');
         marioElement.style.left = (this.mario.x - this.camera.x) + 'px';
@@ -420,6 +544,22 @@ class SuperMarioBros {
             marioElement.classList.add('mario-big');
         } else if (this.mario.state === 'fire') {
             marioElement.classList.add('mario-fire');
+        }
+        
+        // Add animation classes
+        if (this.mario.walking && this.mario.onGround) {
+            marioElement.classList.add('mario-walking');
+        }
+        
+        if (this.mario.ducking) {
+            marioElement.classList.add('mario-ducking');
+        }
+        
+        // Flip mario based on facing direction
+        if (this.mario.facing === 'left') {
+            marioElement.style.transform = 'scaleX(-1)';
+        } else {
+            marioElement.style.transform = 'scaleX(1)';
         }
         
         // Flashing effect when invulnerable
@@ -585,6 +725,35 @@ class SuperMarioBros {
                 this.collectPowerup(index);
             }
         });
+        
+        // Mario vs Coins
+        this.coins.forEach((coin, index) => {
+            if (!coin.active) return;
+            
+            if (this.isColliding(this.mario, coin)) {
+                this.collectCoin(index);
+            }
+        });
+        
+        // Mario vs Flagpole
+        if (this.flagpole && this.isColliding(this.mario, this.flagpole)) {
+            this.reachGoal();
+        }
+        
+        // Fireball vs Enemies
+        this.fireballs.forEach((fireball, fireballIndex) => {
+            if (!fireball.active) return;
+            
+            this.enemies.forEach((enemy, enemyIndex) => {
+                if (!enemy.active) return;
+                
+                if (this.isColliding(fireball, enemy)) {
+                    this.destroyEnemy(enemyIndex);
+                    this.destroyFireball(fireballIndex);
+                    this.addScore(200);
+                }
+            });
+        });
     }
     
     isColliding(rect1, rect2) {
@@ -643,6 +812,109 @@ class SuperMarioBros {
         }
     }
     
+    collectCoin(index) {
+        const coin = this.coins[index];
+        coin.active = false;
+        
+        const coinElement = document.getElementById(`coin_${index + 1}`);
+        if (coinElement) {
+            coinElement.style.display = 'none';
+        }
+        
+        this.gameCoins++;
+        this.addScore(200);
+        
+        // Extra life every 100 coins
+        if (this.gameCoins % 100 === 0) {
+            this.lives++;
+            this.addScore(500);
+        }
+    }
+    
+    reachGoal() {
+        this.gameRunning = false;
+        const timeBonus = this.time * 50;
+        this.addScore(timeBonus);
+        
+        setTimeout(() => {
+            alert(`Level Complete!\nTime Bonus: ${timeBonus}\nTotal Score: ${this.score}`);
+            // In a real game, this would advance to the next level
+            location.reload();
+        }, 1000);
+    }
+    
+    updateFireballs() {
+        this.fireballs.forEach((fireball, index) => {
+            if (!fireball.active) return;
+            
+            fireball.x += fireball.velocityX;
+            fireball.y += fireball.velocityY;
+            fireball.velocityY += this.gravity * 0.5; // Lighter gravity for fireballs
+            
+            // Bounce on ground
+            if (fireball.y > this.gameHeight - 96) {
+                fireball.y = this.gameHeight - 96;
+                fireball.velocityY = -Math.abs(fireball.velocityY) * 0.7;
+                fireball.bounces++;
+                
+                if (fireball.bounces > 3) {
+                    this.destroyFireball(index);
+                    return;
+                }
+            }
+            
+            // Remove if off screen
+            if (fireball.x < this.camera.x - 100 || fireball.x > this.camera.x + this.gameWidth + 100) {
+                this.destroyFireball(index);
+                return;
+            }
+            
+            // Update DOM element
+            const fireballElement = document.getElementById(`fireball_${index + 1}`);
+            if (fireballElement) {
+                fireballElement.style.left = (fireball.x - this.camera.x) + 'px';
+                fireballElement.style.top = fireball.y + 'px';
+            }
+        });
+    }
+    
+    destroyFireball(index) {
+        this.fireballs[index].active = false;
+        const fireballElement = document.getElementById(`fireball_${index + 1}`);
+        if (fireballElement) {
+            fireballElement.style.display = 'none';
+        }
+    }
+    
+    updateCoins() {
+        this.coins.forEach((coin, index) => {
+            if (!coin.active) return;
+            
+            const coinElement = document.getElementById(`coin_${index + 1}`);
+            if (coinElement) {
+                coinElement.style.left = (coin.x - this.camera.x) + 'px';
+                
+                // Hide if off screen
+                if (coin.x < this.camera.x - 100 || coin.x > this.camera.x + this.gameWidth + 100) {
+                    coinElement.style.display = 'none';
+                } else {
+                    coinElement.style.display = 'block';
+                }
+            }
+        });
+        
+        // Update flagpole position
+        if (this.flagpole) {
+            const poleElement = document.getElementById('flagpole');
+            const flagElement = document.getElementById('flag');
+            
+            if (poleElement && flagElement) {
+                poleElement.style.left = (this.flagpole.x - this.camera.x) + 'px';
+                flagElement.style.left = (this.flagpole.x + 8 - this.camera.x) + 'px';
+            }
+        }
+    }
+    
     addScore(points) {
         this.score += points;
         this.updateUI();
@@ -691,6 +963,8 @@ class SuperMarioBros {
         this.updateMario();
         this.updateEnemies();
         this.updatePowerups();
+        this.updateFireballs();
+        this.updateCoins();
         this.updateCamera();
         this.checkCollisions();
         
