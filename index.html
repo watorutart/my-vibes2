@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ドラゴンクエスト1</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #gameScreen {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: #0066cc;
+        }
+        
+        #gameArea {
+            width: 80%;
+            height: 80%;
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            background: #000;
+            border: 4px solid #fff;
+        }
+        
+        #mapArea {
+            width: 100%;
+            height: 70%;
+            background: #006600;
+            position: relative;
+        }
+        
+        #statusArea {
+            width: 100%;
+            height: 30%;
+            background: #000066;
+            border-top: 2px solid #fff;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        
+        #player {
+            width: 20px;
+            height: 20px;
+            background: #ffff00;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .dialog {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000;
+            border: 4px solid #fff;
+            padding: 20px;
+            min-width: 300px;
+            z-index: 100;
+            display: none;
+        }
+        
+        .enemy {
+            width: 30px;
+            height: 30px;
+            background: #ff0000;
+            position: absolute;
+        }
+        
+        .npc {
+            width: 20px;
+            height: 20px;
+            background: #00ffff;
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameScreen">
+        <div id="gameArea">
+            <div id="mapArea">
+                <div id="player"></div>
+            </div>
+            <div id="statusArea">
+                <div id="playerStatus">
+                    <div>勇者 レベル: <span id="level">1</span></div>
+                    <div>HP: <span id="hp">15</span>/<span id="maxHp">15</span></div>
+                    <div>MP: <span id="mp">0</span>/<span id="maxMp">0</span></div>
+                    <div>経験値: <span id="exp">0</span></div>
+                    <div>ゴールド: <span id="gold">120</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="dialog" class="dialog">
+            <div id="dialogText"></div>
+            <div id="dialogOptions" style="margin-top: 10px;"></div>
+        </div>
+        
+        <div id="battleDialog" class="dialog">
+            <div id="battleText"></div>
+            <div id="battleOptions" style="margin-top: 10px;">
+                <button onclick="attack()">たたかう</button>
+                <button onclick="runAway()">にげる</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
