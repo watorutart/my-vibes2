@@ -98,6 +98,7 @@
                     <div>MP: <span id="mp">0</span>/<span id="maxMp">0</span></div>
                     <div>経験値: <span id="exp">0</span></div>
                     <div>ゴールド: <span id="gold">120</span></div>
+                    <div style="margin-top: 10px; font-size: 12px;">I:アイテム S:ステータス</div>
                 </div>
             </div>
         </div>
@@ -111,8 +112,15 @@
             <div id="battleText"></div>
             <div id="battleOptions" style="margin-top: 10px;">
                 <button onclick="attack()">たたかう</button>
+                <button onclick="castSpellInBattle()">じゅもん</button>
+                <button onclick="useItemInBattle()">どうぐ</button>
                 <button onclick="runAway()">にげる</button>
             </div>
+        </div>
+        
+        <div id="shopDialog" class="dialog">
+            <div id="shopText"></div>
+            <div id="shopOptions" style="margin-top: 10px;"></div>
         </div>
     </div>
     
