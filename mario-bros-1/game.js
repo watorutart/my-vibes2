@@ -61,4 +61,644 @@ class SuperMarioBros {
     }
     
     setupControls() {
-        document.addEventListener('keydown', (e) => {\n            this.keys[e.key.toLowerCase()] = true;\n            // Prevent default for arrow keys and WASD\n            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {\n                e.preventDefault();\n            }\n        });\n        \n        document.addEventListener('keyup', (e) => {\n            this.keys[e.key.toLowerCase()] = false;\n        });\n    }\n    \n    createLevel() {\n        // Ground blocks\n        for (let i = 0; i < 100; i++) {\n            this.createBlock(i * 32, this.gameHeight - 64, 'ground');\n        }\n        \n        // Question blocks\n        this.createBlock(256, this.gameHeight - 200, 'question');\n        this.createBlock(320, this.gameHeight - 200, 'question');\n        this.createBlock(352, this.gameHeight - 200, 'question');\n        this.createBlock(384, this.gameHeight - 200, 'question');\n        \n        // Brick blocks\n        this.createBlock(320, this.gameHeight - 264, 'brick');\n        this.createBlock(352, this.gameHeight - 264, 'brick');\n        this.createBlock(384, this.gameHeight - 264, 'brick');\n        this.createBlock(416, this.gameHeight - 264, 'brick');\n        this.createBlock(448, this.gameHeight - 264, 'brick');\n        this.createBlock(480, this.gameHeight - 264, 'brick');\n        this.createBlock(512, this.gameHeight - 264, 'brick');\n        this.createBlock(544, this.gameHeight - 264, 'brick');\n        \n        // Platforms\n        for (let i = 0; i < 4; i++) {\n            this.createBlock(672 + i * 32, this.gameHeight - 200, 'brick');\n        }\n        \n        // Pipe\n        this.createPipe(896, this.gameHeight - 128, 64, 64);\n        \n        // More platforms\n        for (let i = 0; i < 3; i++) {\n            this.createBlock(1120 + i * 32, this.gameHeight - 200, 'brick');\n        }\n        \n        // High platform\n        for (let i = 0; i < 8; i++) {\n            this.createBlock(1280 + i * 32, this.gameHeight - 330, 'brick');\n        }\n        \n        // Enemies\n        this.createEnemy(400, this.gameHeight - 96, 'goomba');\n        this.createEnemy(600, this.gameHeight - 96, 'goomba');\n        this.createEnemy(800, this.gameHeight - 96, 'goomba');\n        this.createEnemy(1000, this.gameHeight - 96, 'koopa');\n        this.createEnemy(1200, this.gameHeight - 96, 'goomba');\n        \n        // Powerups (hidden in question blocks)\n        // We'll spawn these when blocks are hit\n        \n        this.createClouds();\n        this.createHills();\n    }\n    \n    createBlock(x, y, type) {\n        const block = {\n            x: x,\n            y: y,\n            width: 32,\n            height: 32,\n            type: type,\n            active: true,\n            hit: false\n        };\n        \n        this.blocks.push(block);\n        \n        // Create DOM element\n        const blockElement = document.createElement('div');\n        if (type === 'ground') {\n            blockElement.className = 'block';\n            blockElement.style.background = '#8B4513';\n        } else if (type === 'brick') {\n            blockElement.className = 'brick';\n        } else if (type === 'question') {\n            blockElement.className = 'block';\n            blockElement.style.background = '#FFD700';\n            blockElement.innerHTML = '?';\n            blockElement.style.textAlign = 'center';\n            blockElement.style.lineHeight = '28px';\n            blockElement.style.fontWeight = 'bold';\n        }\n        \n        blockElement.style.left = x + 'px';\n        blockElement.style.top = y + 'px';\n        blockElement.id = `block_${this.blocks.length}`;\n        \n        document.getElementById('gameContainer').appendChild(blockElement);\n    }\n    \n    createPipe(x, y, width, height) {\n        const pipe = {\n            x: x,\n            y: y,\n            width: width,\n            height: height,\n            type: 'pipe'\n        };\n        \n        this.blocks.push(pipe);\n        \n        const pipeElement = document.createElement('div');\n        pipeElement.className = 'pipe';\n        pipeElement.style.left = x + 'px';\n        pipeElement.style.top = y + 'px';\n        pipeElement.style.width = width + 'px';\n        pipeElement.style.height = height + 'px';\n        \n        document.getElementById('gameContainer').appendChild(pipeElement);\n    }\n    \n    createEnemy(x, y, type) {\n        const enemy = {\n            x: x,\n            y: y,\n            width: 28,\n            height: 28,\n            velocityX: -1,\n            velocityY: 0,\n            type: type,\n            active: true,\n            onGround: false\n        };\n        \n        this.enemies.push(enemy);\n        \n        const enemyElement = document.createElement('div');\n        enemyElement.className = 'enemy';\n        if (type === 'koopa') {\n            enemyElement.style.background = '#228B22';\n            enemyElement.style.borderRadius = '20%';\n        }\n        enemyElement.style.left = x + 'px';\n        enemyElement.style.top = y + 'px';\n        enemyElement.id = `enemy_${this.enemies.length}`;\n        \n        document.getElementById('gameContainer').appendChild(enemyElement);\n    }\n    \n    createPowerup(x, y, type) {\n        const powerup = {\n            x: x,\n            y: y,\n            width: 28,\n            height: 28,\n            velocityX: 2,\n            velocityY: 0,\n            type: type,\n            active: true\n        };\n        \n        this.powerups.push(powerup);\n        \n        const powerupElement = document.createElement('div');\n        powerupElement.className = 'powerup';\n        if (type === 'mushroom') {\n            powerupElement.style.background = '#FF6B6B';\n        } else if (type === 'flower') {\n            powerupElement.style.background = '#FFA500';\n        }\n        powerupElement.style.left = x + 'px';\n        powerupElement.style.top = y + 'px';\n        powerupElement.id = `powerup_${this.powerups.length}`;\n        \n        document.getElementById('gameContainer').appendChild(powerupElement);\n    }\n    \n    createClouds() {\n        const clouds = [\n            {x: 200, y: 100, width: 64, height: 32},\n            {x: 500, y: 80, width: 96, height: 48},\n            {x: 800, y: 120, width: 80, height: 40},\n            {x: 1200, y: 90, width: 72, height: 36}\n        ];\n        \n        clouds.forEach((cloud, index) => {\n            const cloudElement = document.createElement('div');\n            cloudElement.className = 'cloud';\n            cloudElement.style.left = cloud.x + 'px';\n            cloudElement.style.top = cloud.y + 'px';\n            cloudElement.style.width = cloud.width + 'px';\n            cloudElement.style.height = cloud.height + 'px';\n            \n            document.getElementById('gameContainer').appendChild(cloudElement);\n        });\n    }\n    \n    createHills() {\n        const hills = [\n            {x: 100, width: 128, height: 64},\n            {x: 400, width: 96, height: 48},\n            {x: 700, width: 144, height: 72},\n            {x: 1100, width: 112, height: 56}\n        ];\n        \n        hills.forEach((hill, index) => {\n            const hillElement = document.createElement('div');\n            hillElement.className = 'hill';\n            hillElement.style.left = hill.x + 'px';\n            hillElement.style.width = hill.width + 'px';\n            hillElement.style.height = hill.height + 'px';\n            \n            document.getElementById('gameContainer').appendChild(hillElement);\n        });\n    }\n    \n    updateMario() {\n        // Handle input\n        if (this.keys['a'] || this.keys['arrowleft']) {\n            this.mario.velocityX = -this.mario.speed;\n            this.mario.facing = 'left';\n        } else if (this.keys['d'] || this.keys['arrowright']) {\n            this.mario.velocityX = this.mario.speed;\n            this.mario.facing = 'right';\n        } else {\n            this.mario.velocityX *= 0.8; // Friction\n        }\n        \n        // Jump\n        if ((this.keys['w'] || this.keys['arrowup']) && this.mario.onGround) {\n            this.mario.velocityY = -this.mario.jumpPower;\n            this.mario.onGround = false;\n        }\n        \n        // Apply gravity\n        if (!this.mario.onGround) {\n            this.mario.velocityY += this.gravity;\n            if (this.mario.velocityY > this.maxFallSpeed) {\n                this.mario.velocityY = this.maxFallSpeed;\n            }\n        }\n        \n        // Update position\n        this.mario.x += this.mario.velocityX;\n        this.mario.y += this.mario.velocityY;\n        \n        // Boundary checks\n        if (this.mario.x < 0) this.mario.x = 0;\n        if (this.mario.x > this.levelWidth - this.mario.width) {\n            this.mario.x = this.levelWidth - this.mario.width;\n        }\n        \n        // Ground collision (temporary until proper collision)\n        if (this.mario.y > this.gameHeight - 96) {\n            this.mario.y = this.gameHeight - 96;\n            this.mario.velocityY = 0;\n            this.mario.onGround = true;\n        }\n        \n        // Update camera\n        this.camera.x = this.mario.x - this.gameWidth / 3;\n        if (this.camera.x < 0) this.camera.x = 0;\n        if (this.camera.x > this.levelWidth - this.gameWidth) {\n            this.camera.x = this.levelWidth - this.gameWidth;\n        }\n        \n        // Handle invulnerability\n        if (this.mario.invulnerable) {\n            this.mario.invulnerableTime--;\n            if (this.mario.invulnerableTime <= 0) {\n                this.mario.invulnerable = false;\n            }\n        }\n        \n        this.updateMarioDOM();\n    }\n    \n    updateMarioDOM() {\n        const marioElement = document.getElementById('mario');\n        marioElement.style.left = (this.mario.x - this.camera.x) + 'px';\n        marioElement.style.bottom = (this.gameHeight - this.mario.y - this.mario.height) + 'px';\n        \n        // Update mario appearance based on state\n        marioElement.className = '';\n        if (this.mario.state === 'small') {\n            marioElement.classList.add('mario-small');\n        } else if (this.mario.state === 'big') {\n            marioElement.classList.add('mario-big');\n        } else if (this.mario.state === 'fire') {\n            marioElement.classList.add('mario-fire');\n        }\n        \n        // Flashing effect when invulnerable\n        if (this.mario.invulnerable && Math.floor(this.mario.invulnerableTime / 5) % 2) {\n            marioElement.style.opacity = '0.3';\n        } else {\n            marioElement.style.opacity = '1';\n        }\n    }\n    \n    updateEnemies() {\n        this.enemies.forEach((enemy, index) => {\n            if (!enemy.active) return;\n            \n            // Simple AI - move back and forth\n            enemy.x += enemy.velocityX;\n            \n            // Apply gravity\n            enemy.velocityY += this.gravity;\n            enemy.y += enemy.velocityY;\n            \n            // Ground collision (simple)\n            if (enemy.y > this.gameHeight - 96) {\n                enemy.y = this.gameHeight - 96;\n                enemy.velocityY = 0;\n                enemy.onGround = true;\n            }\n            \n            // Turn around at edges or walls\n            if (enemy.x < 0 || enemy.x > this.levelWidth) {\n                enemy.velocityX *= -1;\n            }\n            \n            // Update DOM element\n            const enemyElement = document.getElementById(`enemy_${index + 1}`);\n            if (enemyElement) {\n                enemyElement.style.left = (enemy.x - this.camera.x) + 'px';\n                enemyElement.style.top = enemy.y + 'px';\n                \n                // Hide if off screen\n                if (enemy.x < this.camera.x - 100 || enemy.x > this.camera.x + this.gameWidth + 100) {\n                    enemyElement.style.display = 'none';\n                } else {\n                    enemyElement.style.display = 'block';\n                }\n            }\n        });\n    }\n    \n    updatePowerups() {\n        this.powerups.forEach((powerup, index) => {\n            if (!powerup.active) return;\n            \n            powerup.x += powerup.velocityX;\n            powerup.velocityY += this.gravity;\n            powerup.y += powerup.velocityY;\n            \n            // Ground collision\n            if (powerup.y > this.gameHeight - 96) {\n                powerup.y = this.gameHeight - 96;\n                powerup.velocityY = 0;\n            }\n            \n            // Update DOM element\n            const powerupElement = document.getElementById(`powerup_${index + 1}`);\n            if (powerupElement) {\n                powerupElement.style.left = (powerup.x - this.camera.x) + 'px';\n                powerupElement.style.top = powerup.y + 'px';\n            }\n        });\n    }\n    \n    updateCamera() {\n        // Update all block positions based on camera\n        this.blocks.forEach((block, index) => {\n            const blockElement = document.getElementById(`block_${index + 1}`);\n            if (blockElement) {\n                blockElement.style.left = (block.x - this.camera.x) + 'px';\n                \n                // Hide blocks that are off-screen for performance\n                if (block.x < this.camera.x - 100 || block.x > this.camera.x + this.gameWidth + 100) {\n                    blockElement.style.display = 'none';\n                } else {\n                    blockElement.style.display = 'block';\n                }\n            }\n        });\n        \n        // Update clouds and hills\n        const clouds = document.querySelectorAll('.cloud');\n        clouds.forEach((cloud, index) => {\n            const originalLeft = parseInt(cloud.style.left) + this.camera.x * 0.5; // Parallax effect\n            cloud.style.left = (originalLeft - this.camera.x * 0.5) + 'px';\n        });\n        \n        const hills = document.querySelectorAll('.hill');\n        hills.forEach((hill, index) => {\n            const originalLeft = parseInt(hill.style.left) + this.camera.x * 0.3; // Parallax effect\n            hill.style.left = (originalLeft - this.camera.x * 0.3) + 'px';\n        });\n    }\n    \n    checkCollisions() {\n        // Mario vs Enemies\n        this.enemies.forEach((enemy, index) => {\n            if (!enemy.active || this.mario.invulnerable) return;\n            \n            if (this.isColliding(this.mario, enemy)) {\n                if (this.mario.velocityY > 0 && this.mario.y < enemy.y) {\n                    // Mario jumps on enemy\n                    this.destroyEnemy(index);\n                    this.mario.velocityY = -8; // Bounce\n                    this.addScore(100);\n                } else {\n                    // Mario hits enemy\n                    this.hitMario();\n                }\n            }\n        });\n        \n        // Mario vs Powerups\n        this.powerups.forEach((powerup, index) => {\n            if (!powerup.active) return;\n            \n            if (this.isColliding(this.mario, powerup)) {\n                this.collectPowerup(index);\n            }\n        });\n    }\n    \n    isColliding(rect1, rect2) {\n        return rect1.x < rect2.x + rect2.width &&\n               rect1.x + rect1.width > rect2.x &&\n               rect1.y < rect2.y + rect2.height &&\n               rect1.y + rect1.height > rect2.y;\n    }\n    \n    destroyEnemy(index) {\n        this.enemies[index].active = false;\n        const enemyElement = document.getElementById(`enemy_${index + 1}`);\n        if (enemyElement) {\n            enemyElement.style.display = 'none';\n        }\n    }\n    \n    hitMario() {\n        if (this.mario.invulnerable) return;\n        \n        if (this.mario.state === 'small') {\n            this.lives--;\n            if (this.lives <= 0) {\n                this.gameOver();\n            } else {\n                this.respawnMario();\n            }\n        } else {\n            // Power down\n            this.mario.state = 'small';\n            this.mario.height = 32;\n            this.mario.invulnerable = true;\n            this.mario.invulnerableTime = 120; // 2 seconds at 60fps\n        }\n    }\n    \n    collectPowerup(index) {\n        const powerup = this.powerups[index];\n        powerup.active = false;\n        \n        const powerupElement = document.getElementById(`powerup_${index + 1}`);\n        if (powerupElement) {\n            powerupElement.style.display = 'none';\n        }\n        \n        if (powerup.type === 'mushroom') {\n            if (this.mario.state === 'small') {\n                this.mario.state = 'big';\n                this.mario.height = 48;\n                this.addScore(1000);\n            }\n        } else if (powerup.type === 'flower') {\n            this.mario.state = 'fire';\n            this.mario.height = 48;\n            this.addScore(1000);\n        }\n    }\n    \n    addScore(points) {\n        this.score += points;\n        this.updateUI();\n    }\n    \n    respawnMario() {\n        this.mario.x = 100;\n        this.mario.y = this.gameHeight - 200;\n        this.mario.velocityX = 0;\n        this.mario.velocityY = 0;\n        this.mario.state = 'small';\n        this.mario.invulnerable = true;\n        this.mario.invulnerableTime = 180;\n        this.camera.x = 0;\n    }\n    \n    gameOver() {\n        this.gameRunning = false;\n        alert('Game Over!');\n        location.reload();\n    }\n    \n    updateUI() {\n        document.getElementById('score').textContent = this.score.toString().padStart(6, '0');\n        document.getElementById('coins').textContent = this.gameCoins.toString().padStart(2, '0');\n        document.getElementById('lives').textContent = this.lives.toString();\n        document.getElementById('time').textContent = this.time.toString();\n    }\n    \n    startTimer() {\n        setInterval(() => {\n            if (this.gameRunning && this.time > 0) {\n                this.time--;\n                this.updateUI();\n                \n                if (this.time <= 0) {\n                    this.hitMario();\n                }\n            }\n        }, 1000);\n    }\n    \n    gameLoop() {\n        if (!this.gameRunning) return;\n        \n        this.updateMario();\n        this.updateEnemies();\n        this.updatePowerups();\n        this.updateCamera();\n        this.checkCollisions();\n        \n        requestAnimationFrame(() => this.gameLoop());\n    }\n}\n\n// Start the game\nwindow.onload = () => {\n    new SuperMarioBros();\n};
+        document.addEventListener('keydown', (e) => {
+            this.keys[e.key.toLowerCase()] = true;
+            // Prevent default for arrow keys and WASD
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.key.toLowerCase()] = false;
+        });
+    }
+    
+    createLevel() {
+        // Ground blocks
+        for (let i = 0; i < 100; i++) {
+            this.createBlock(i * 32, this.gameHeight - 64, 'ground');
+        }
+        
+        // Question blocks
+        this.createBlock(256, this.gameHeight - 200, 'question');
+        this.createBlock(320, this.gameHeight - 200, 'question');
+        this.createBlock(352, this.gameHeight - 200, 'question');
+        this.createBlock(384, this.gameHeight - 200, 'question');
+        
+        // Brick blocks
+        this.createBlock(320, this.gameHeight - 264, 'brick');
+        this.createBlock(352, this.gameHeight - 264, 'brick');
+        this.createBlock(384, this.gameHeight - 264, 'brick');
+        this.createBlock(416, this.gameHeight - 264, 'brick');
+        this.createBlock(448, this.gameHeight - 264, 'brick');
+        this.createBlock(480, this.gameHeight - 264, 'brick');
+        this.createBlock(512, this.gameHeight - 264, 'brick');
+        this.createBlock(544, this.gameHeight - 264, 'brick');
+        
+        // Platforms
+        for (let i = 0; i < 4; i++) {
+            this.createBlock(672 + i * 32, this.gameHeight - 200, 'brick');
+        }
+        
+        // Pipe
+        this.createPipe(896, this.gameHeight - 128, 64, 64);
+        
+        // More platforms
+        for (let i = 0; i < 3; i++) {
+            this.createBlock(1120 + i * 32, this.gameHeight - 200, 'brick');
+        }
+        
+        // High platform
+        for (let i = 0; i < 8; i++) {
+            this.createBlock(1280 + i * 32, this.gameHeight - 330, 'brick');
+        }
+        
+        // Enemies
+        this.createEnemy(400, this.gameHeight - 96, 'goomba');
+        this.createEnemy(600, this.gameHeight - 96, 'goomba');
+        this.createEnemy(800, this.gameHeight - 96, 'goomba');
+        this.createEnemy(1000, this.gameHeight - 96, 'koopa');
+        this.createEnemy(1200, this.gameHeight - 96, 'goomba');
+        
+        // Powerups (hidden in question blocks)
+        // We'll spawn these when blocks are hit
+        
+        this.createClouds();
+        this.createHills();
+    }
+    
+    createBlock(x, y, type) {
+        const block = {
+            x: x,
+            y: y,
+            width: 32,
+            height: 32,
+            type: type,
+            active: true,
+            hit: false
+        };
+        
+        this.blocks.push(block);
+        
+        // Create DOM element
+        const blockElement = document.createElement('div');
+        if (type === 'ground') {
+            blockElement.className = 'block';
+            blockElement.style.background = '#8B4513';
+        } else if (type === 'brick') {
+            blockElement.className = 'brick';
+        } else if (type === 'question') {
+            blockElement.className = 'block';
+            blockElement.style.background = '#FFD700';
+            blockElement.innerHTML = '?';
+            blockElement.style.textAlign = 'center';
+            blockElement.style.lineHeight = '28px';
+            blockElement.style.fontWeight = 'bold';
+        }
+        
+        blockElement.style.left = x + 'px';
+        blockElement.style.top = y + 'px';
+        blockElement.id = `block_${this.blocks.length}`;
+        
+        document.getElementById('gameContainer').appendChild(blockElement);
+    }
+    
+    createPipe(x, y, width, height) {
+        const pipe = {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            type: 'pipe'
+        };
+        
+        this.blocks.push(pipe);
+        
+        const pipeElement = document.createElement('div');
+        pipeElement.className = 'pipe';
+        pipeElement.style.left = x + 'px';
+        pipeElement.style.top = y + 'px';
+        pipeElement.style.width = width + 'px';
+        pipeElement.style.height = height + 'px';
+        
+        document.getElementById('gameContainer').appendChild(pipeElement);
+    }
+    
+    createEnemy(x, y, type) {
+        const enemy = {
+            x: x,
+            y: y,
+            width: 28,
+            height: 28,
+            velocityX: -1,
+            velocityY: 0,
+            type: type,
+            active: true,
+            onGround: false
+        };
+        
+        this.enemies.push(enemy);
+        
+        const enemyElement = document.createElement('div');
+        enemyElement.className = 'enemy';
+        if (type === 'koopa') {
+            enemyElement.style.background = '#228B22';
+            enemyElement.style.borderRadius = '20%';
+        }
+        enemyElement.style.left = x + 'px';
+        enemyElement.style.top = y + 'px';
+        enemyElement.id = `enemy_${this.enemies.length}`;
+        
+        document.getElementById('gameContainer').appendChild(enemyElement);
+    }
+    
+    createPowerup(x, y, type) {
+        const powerup = {
+            x: x,
+            y: y,
+            width: 28,
+            height: 28,
+            velocityX: 2,
+            velocityY: 0,
+            type: type,
+            active: true
+        };
+        
+        this.powerups.push(powerup);
+        
+        const powerupElement = document.createElement('div');
+        powerupElement.className = 'powerup';
+        if (type === 'mushroom') {
+            powerupElement.style.background = '#FF6B6B';
+        } else if (type === 'flower') {
+            powerupElement.style.background = '#FFA500';
+        }
+        powerupElement.style.left = x + 'px';
+        powerupElement.style.top = y + 'px';
+        powerupElement.id = `powerup_${this.powerups.length}`;
+        
+        document.getElementById('gameContainer').appendChild(powerupElement);
+    }
+    
+    createClouds() {
+        const clouds = [
+            {x: 200, y: 100, width: 64, height: 32},
+            {x: 500, y: 80, width: 96, height: 48},
+            {x: 800, y: 120, width: 80, height: 40},
+            {x: 1200, y: 90, width: 72, height: 36}
+        ];
+        
+        clouds.forEach((cloud) => {
+            const cloudElement = document.createElement('div');
+            cloudElement.className = 'cloud';
+            cloudElement.style.left = cloud.x + 'px';
+            cloudElement.style.top = cloud.y + 'px';
+            cloudElement.style.width = cloud.width + 'px';
+            cloudElement.style.height = cloud.height + 'px';
+            cloudElement.setAttribute('data-original-x', cloud.x);
+            
+            document.getElementById('gameContainer').appendChild(cloudElement);
+        });
+    }
+    
+    createHills() {
+        const hills = [
+            {x: 100, width: 128, height: 64},
+            {x: 400, width: 96, height: 48},
+            {x: 700, width: 144, height: 72},
+            {x: 1100, width: 112, height: 56}
+        ];
+        
+        hills.forEach((hill) => {
+            const hillElement = document.createElement('div');
+            hillElement.className = 'hill';
+            hillElement.style.left = hill.x + 'px';
+            hillElement.style.width = hill.width + 'px';
+            hillElement.style.height = hill.height + 'px';
+            hillElement.setAttribute('data-original-x', hill.x);
+            
+            document.getElementById('gameContainer').appendChild(hillElement);
+        });
+    }
+    
+    updateMario() {
+        // Handle input
+        if (this.keys['a'] || this.keys['arrowleft']) {
+            this.mario.velocityX = -this.mario.speed;
+            this.mario.facing = 'left';
+        } else if (this.keys['d'] || this.keys['arrowright']) {
+            this.mario.velocityX = this.mario.speed;
+            this.mario.facing = 'right';
+        } else {
+            this.mario.velocityX *= 0.8; // Friction
+        }
+        
+        // Jump
+        if ((this.keys['w'] || this.keys['arrowup']) && this.mario.onGround) {
+            this.mario.velocityY = -this.mario.jumpPower;
+            this.mario.onGround = false;
+        }
+        
+        // Apply gravity
+        if (!this.mario.onGround) {
+            this.mario.velocityY += this.gravity;
+            if (this.mario.velocityY > this.maxFallSpeed) {
+                this.mario.velocityY = this.maxFallSpeed;
+            }
+        }
+        
+        // Block collision detection with separate X and Y updates
+        this.mario.onGround = false;
+        
+        // Check horizontal collisions first
+        const nextX = this.mario.x + this.mario.velocityX;
+        this.blocks.forEach(block => {
+            if (!block.active) return;
+            
+            if (this.mario.y < block.y + block.height &&
+                this.mario.y + this.mario.height > block.y &&
+                nextX < block.x + block.width &&
+                nextX + this.mario.width > block.x) {
+                
+                if (this.mario.velocityX > 0) {
+                    this.mario.x = block.x - this.mario.width;
+                } else if (this.mario.velocityX < 0) {
+                    this.mario.x = block.x + block.width;
+                }
+                this.mario.velocityX = 0;
+            }
+        });
+        
+        // Update X position
+        this.mario.x += this.mario.velocityX;
+        
+        // Check vertical collisions
+        const nextY = this.mario.y + this.mario.velocityY;
+        this.blocks.forEach(block => {
+            if (!block.active) return;
+            
+            if (this.mario.x < block.x + block.width &&
+                this.mario.x + this.mario.width > block.x &&
+                nextY < block.y + block.height &&
+                nextY + this.mario.height > block.y) {
+                
+                if (this.mario.velocityY > 0) {
+                    // Landing on top
+                    this.mario.y = block.y - this.mario.height;
+                    this.mario.velocityY = 0;
+                    this.mario.onGround = true;
+                } else if (this.mario.velocityY < 0) {
+                    // Hitting from below
+                    this.mario.y = block.y + block.height;
+                    this.mario.velocityY = 0;
+                    
+                    // Hit question block
+                    if (block.type === 'question' && !block.hit) {
+                        this.hitQuestionBlock(block);
+                    }
+                }
+            }
+        });
+        
+        // Update Y position
+        this.mario.y += this.mario.velocityY;
+        
+        // Boundary checks
+        if (this.mario.x < 0) this.mario.x = 0;
+        if (this.mario.x > this.levelWidth - this.mario.width) {
+            this.mario.x = this.levelWidth - this.mario.width;
+        }
+        
+        // Update camera
+        this.camera.x = this.mario.x - this.gameWidth / 3;
+        if (this.camera.x < 0) this.camera.x = 0;
+        if (this.camera.x > this.levelWidth - this.gameWidth) {
+            this.camera.x = this.levelWidth - this.gameWidth;
+        }
+        
+        // Handle invulnerability
+        if (this.mario.invulnerable) {
+            this.mario.invulnerableTime--;
+            if (this.mario.invulnerableTime <= 0) {
+                this.mario.invulnerable = false;
+            }
+        }
+        
+        this.updateMarioDOM();
+    }
+    
+    hitQuestionBlock(block) {
+        block.hit = true;
+        const blockIndex = this.blocks.indexOf(block);
+        const blockElement = document.getElementById(`block_${blockIndex + 1}`);
+        if (blockElement) {
+            blockElement.style.background = '#8B4513';
+            blockElement.innerHTML = '';
+        }
+        
+        // Spawn powerup
+        if (this.mario.state === 'small') {
+            this.createPowerup(block.x, block.y - 32, 'mushroom');
+        } else {
+            this.createPowerup(block.x, block.y - 32, 'flower');
+        }
+        
+        this.addScore(200);
+    }
+    
+    updateMarioDOM() {
+        const marioElement = document.getElementById('mario');
+        marioElement.style.left = (this.mario.x - this.camera.x) + 'px';
+        marioElement.style.bottom = (this.gameHeight - this.mario.y - this.mario.height) + 'px';
+        
+        // Update mario appearance based on state
+        marioElement.className = '';
+        if (this.mario.state === 'small') {
+            marioElement.classList.add('mario-small');
+        } else if (this.mario.state === 'big') {
+            marioElement.classList.add('mario-big');
+        } else if (this.mario.state === 'fire') {
+            marioElement.classList.add('mario-fire');
+        }
+        
+        // Flashing effect when invulnerable
+        if (this.mario.invulnerable && Math.floor(this.mario.invulnerableTime / 5) % 2) {
+            marioElement.style.opacity = '0.3';
+        } else {
+            marioElement.style.opacity = '1';
+        }
+    }
+    
+    updateEnemies() {
+        this.enemies.forEach((enemy, index) => {
+            if (!enemy.active) return;
+            
+            // Simple AI - move back and forth
+            enemy.x += enemy.velocityX;
+            
+            // Apply gravity
+            enemy.velocityY += this.gravity;
+            enemy.y += enemy.velocityY;
+            
+            // Block collision for enemies
+            enemy.onGround = false;
+            this.blocks.forEach(block => {
+                if (!block.active) return;
+                
+                if (enemy.x < block.x + block.width &&
+                    enemy.x + enemy.width > block.x &&
+                    enemy.y + enemy.velocityY < block.y + block.height &&
+                    enemy.y + enemy.velocityY + enemy.height > block.y) {
+                    
+                    if (enemy.velocityY > 0) {
+                        enemy.y = block.y - enemy.height;
+                        enemy.velocityY = 0;
+                        enemy.onGround = true;
+                    }
+                }
+                
+                // Wall collision - turn around
+                if (enemy.y < block.y + block.height &&
+                    enemy.y + enemy.height > block.y &&
+                    enemy.x + enemy.velocityX < block.x + block.width &&
+                    enemy.x + enemy.velocityX + enemy.width > block.x) {
+                    enemy.velocityX *= -1;
+                }
+            });
+            
+            // Turn around at level edges
+            if (enemy.x < 0 || enemy.x > this.levelWidth) {
+                enemy.velocityX *= -1;
+            }
+            
+            // Update DOM element
+            const enemyElement = document.getElementById(`enemy_${index + 1}`);
+            if (enemyElement) {
+                enemyElement.style.left = (enemy.x - this.camera.x) + 'px';
+                enemyElement.style.top = enemy.y + 'px';
+                
+                // Hide if off screen
+                if (enemy.x < this.camera.x - 100 || enemy.x > this.camera.x + this.gameWidth + 100) {
+                    enemyElement.style.display = 'none';
+                } else {
+                    enemyElement.style.display = 'block';
+                }
+            }
+        });
+    }
+    
+    updatePowerups() {
+        this.powerups.forEach((powerup, index) => {
+            if (!powerup.active) return;
+            
+            powerup.x += powerup.velocityX;
+            powerup.velocityY += this.gravity;
+            powerup.y += powerup.velocityY;
+            
+            // Block collision for powerups
+            this.blocks.forEach(block => {
+                if (!block.active) return;
+                
+                if (powerup.x < block.x + block.width &&
+                    powerup.x + powerup.width > block.x &&
+                    powerup.y + powerup.velocityY < block.y + block.height &&
+                    powerup.y + powerup.velocityY + powerup.height > block.y) {
+                    
+                    if (powerup.velocityY > 0) {
+                        powerup.y = block.y - powerup.height;
+                        powerup.velocityY = 0;
+                    }
+                }
+                
+                // Wall collision - turn around
+                if (powerup.y < block.y + block.height &&
+                    powerup.y + powerup.height > block.y &&
+                    powerup.x + powerup.velocityX < block.x + block.width &&
+                    powerup.x + powerup.velocityX + powerup.width > block.x) {
+                    powerup.velocityX *= -1;
+                }
+            });
+            
+            // Update DOM element
+            const powerupElement = document.getElementById(`powerup_${index + 1}`);
+            if (powerupElement) {
+                powerupElement.style.left = (powerup.x - this.camera.x) + 'px';
+                powerupElement.style.top = powerup.y + 'px';
+            }
+        });
+    }
+    
+    updateCamera() {
+        // Update all block positions based on camera
+        this.blocks.forEach((block, index) => {
+            const blockElement = document.getElementById(`block_${index + 1}`);
+            if (blockElement) {
+                blockElement.style.left = (block.x - this.camera.x) + 'px';
+                
+                // Hide blocks that are off-screen for performance
+                if (block.x < this.camera.x - 100 || block.x > this.camera.x + this.gameWidth + 100) {
+                    blockElement.style.display = 'none';
+                } else {
+                    blockElement.style.display = 'block';
+                }
+            }
+        });
+        
+        // Update clouds and hills with parallax effect
+        const clouds = document.querySelectorAll('.cloud');
+        clouds.forEach((cloud) => {
+            const originalX = parseFloat(cloud.getAttribute('data-original-x'));
+            cloud.style.left = (originalX - this.camera.x * 0.3) + 'px';
+        });
+        
+        const hills = document.querySelectorAll('.hill');
+        hills.forEach((hill) => {
+            const originalX = parseFloat(hill.getAttribute('data-original-x'));
+            hill.style.left = (originalX - this.camera.x * 0.5) + 'px';
+        });
+    }
+    
+    checkCollisions() {
+        // Mario vs Enemies
+        this.enemies.forEach((enemy, index) => {
+            if (!enemy.active || this.mario.invulnerable) return;
+            
+            if (this.isColliding(this.mario, enemy)) {
+                if (this.mario.velocityY > 0 && this.mario.y < enemy.y) {
+                    // Mario jumps on enemy
+                    this.destroyEnemy(index);
+                    this.mario.velocityY = -8; // Bounce
+                    this.addScore(100);
+                } else {
+                    // Mario hits enemy
+                    this.hitMario();
+                }
+            }
+        });
+        
+        // Mario vs Powerups
+        this.powerups.forEach((powerup, index) => {
+            if (!powerup.active) return;
+            
+            if (this.isColliding(this.mario, powerup)) {
+                this.collectPowerup(index);
+            }
+        });
+    }
+    
+    isColliding(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.width &&
+               rect1.x + rect1.width > rect2.x &&
+               rect1.y < rect2.y + rect2.height &&
+               rect1.y + rect1.height > rect2.y;
+    }
+    
+    destroyEnemy(index) {
+        this.enemies[index].active = false;
+        const enemyElement = document.getElementById(`enemy_${index + 1}`);
+        if (enemyElement) {
+            enemyElement.style.display = 'none';
+        }
+    }
+    
+    hitMario() {
+        if (this.mario.invulnerable) return;
+        
+        if (this.mario.state === 'small') {
+            this.lives--;
+            if (this.lives <= 0) {
+                this.gameOver();
+            } else {
+                this.respawnMario();
+            }
+        } else {
+            // Power down
+            this.mario.state = 'small';
+            this.mario.height = 32;
+            this.mario.invulnerable = true;
+            this.mario.invulnerableTime = 120; // 2 seconds at 60fps
+        }
+    }
+    
+    collectPowerup(index) {
+        const powerup = this.powerups[index];
+        powerup.active = false;
+        
+        const powerupElement = document.getElementById(`powerup_${index + 1}`);
+        if (powerupElement) {
+            powerupElement.style.display = 'none';
+        }
+        
+        if (powerup.type === 'mushroom') {
+            if (this.mario.state === 'small') {
+                this.mario.state = 'big';
+                this.mario.height = 48;
+                this.addScore(1000);
+            }
+        } else if (powerup.type === 'flower') {
+            this.mario.state = 'fire';
+            this.mario.height = 48;
+            this.addScore(1000);
+        }
+    }
+    
+    addScore(points) {
+        this.score += points;
+        this.updateUI();
+    }
+    
+    respawnMario() {
+        this.mario.x = 100;
+        this.mario.y = this.gameHeight - 200;
+        this.mario.velocityX = 0;
+        this.mario.velocityY = 0;
+        this.mario.state = 'small';
+        this.mario.invulnerable = true;
+        this.mario.invulnerableTime = 180;
+        this.camera.x = 0;
+    }
+    
+    gameOver() {
+        this.gameRunning = false;
+        alert('Game Over!');
+        location.reload();
+    }
+    
+    updateUI() {
+        document.getElementById('score').textContent = this.score.toString().padStart(6, '0');
+        document.getElementById('coins').textContent = this.gameCoins.toString().padStart(2, '0');
+        document.getElementById('lives').textContent = this.lives.toString();
+        document.getElementById('time').textContent = this.time.toString();
+    }
+    
+    startTimer() {
+        setInterval(() => {
+            if (this.gameRunning && this.time > 0) {
+                this.time--;
+                this.updateUI();
+                
+                if (this.time <= 0) {
+                    this.hitMario();
+                }
+            }
+        }, 1000);
+    }
+    
+    gameLoop() {
+        if (!this.gameRunning) return;
+        
+        this.updateMario();
+        this.updateEnemies();
+        this.updatePowerups();
+        this.updateCamera();
+        this.checkCollisions();
+        
+        requestAnimationFrame(() => this.gameLoop());
+    }
+}
+
+// Start the game
+window.onload = () => {
+    new SuperMarioBros();
+};
