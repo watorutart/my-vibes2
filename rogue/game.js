@@ -34,4 +34,655 @@ class Rogue {
             { name: 'Orc', symbol: 'o', hp: 15, attack: 6, defense: 3, xp: 20, color: '#DC143C' },
             { name: 'Troll', symbol: 'T', hp: 25, attack: 8, defense: 4, xp: 35, color: '#8B008B' },
             { name: 'Dragon', symbol: 'D', hp: 50, attack: 15, defense: 8, xp: 100, color: '#FF0000' }
-        ];\n        \n        this.itemTypes = {\n            weapons: [\n                { name: 'Dagger', symbol: ')', attack: 3, value: 10 },\n                { name: 'Short Sword', symbol: ')', attack: 5, value: 25 },\n                { name: 'Long Sword', symbol: ')', attack: 8, value: 50 },\n                { name: 'Battle Axe', symbol: ')', attack: 12, value: 100 },\n                { name: 'Magic Sword', symbol: ')', attack: 15, value: 200 }\n            ],\n            armor: [\n                { name: 'Leather Armor', symbol: ']', defense: 2, value: 15 },\n                { name: 'Chain Mail', symbol: ']', defense: 4, value: 40 },\n                { name: 'Plate Mail', symbol: ']', defense: 6, value: 80 },\n                { name: 'Magic Armor', symbol: ']', defense: 10, value: 150 }\n            ],\n            potions: [\n                { name: 'Healing Potion', symbol: '!', effect: 'heal', power: 10, value: 20 },\n                { name: 'Strength Potion', symbol: '!', effect: 'strength', power: 2, value: 50 },\n                { name: 'Defense Potion', symbol: '!', effect: 'defense', power: 2, value: 50 }\n            ],\n            food: [\n                { name: 'Ration', symbol: '%', nutrition: 200, value: 5 },\n                { name: 'Bread', symbol: '%', nutrition: 100, value: 3 }\n            ]\n        };\n        \n        this.initGame();\n        this.setupControls();\n        this.generateDungeon();\n        this.placePlayer();\n        this.spawnEnemies();\n        this.spawnItems();\n        this.render();\n        this.updateUI();\n    }\n    \n    initGame() {\n        // Initialize dungeon with walls\n        for (let y = 0; y < this.dungeonHeight; y++) {\n            this.dungeon[y] = [];\n            for (let x = 0; x < this.dungeonWidth; x++) {\n                this.dungeon[y][x] = '#'; // Wall\n            }\n        }\n    }\n    \n    setupControls() {\n        document.addEventListener('keydown', (e) => {\n            if (!this.gameRunning) return;\n            \n            let moved = false;\n            \n            switch(e.key.toLowerCase()) {\n                case 'w':\n                case 'arrowup':\n                    moved = this.movePlayer(0, -1);\n                    break;\n                case 's':\n                case 'arrowdown':\n                    moved = this.movePlayer(0, 1);\n                    break;\n                case 'a':\n                case 'arrowleft':\n                    moved = this.movePlayer(-1, 0);\n                    break;\n                case 'd':\n                case 'arrowright':\n                    moved = this.movePlayer(1, 0);\n                    break;\n                case 'e':\n                    this.pickupItem();\n                    moved = true;\n                    break;\n                case ' ':\n                    // Wait\n                    moved = true;\n                    break;\n                case 'r':\n                    this.rest();\n                    moved = true;\n                    break;\n                case 'i':\n                    this.showInventory();\n                    break;\n            }\n            \n            if (moved) {\n                this.enemyTurn();\n                this.updateFood();\n                this.render();\n                this.updateUI();\n            }\n        });\n    }\n    \n    generateDungeon() {\n        // Generate rooms\n        const numRooms = 6 + Math.floor(Math.random() * 4);\n        \n        for (let i = 0; i < numRooms; i++) {\n            let attempts = 0;\n            while (attempts < 50) {\n                const width = 4 + Math.floor(Math.random() * 8);\n                const height = 3 + Math.floor(Math.random() * 6);\n                const x = 1 + Math.floor(Math.random() * (this.dungeonWidth - width - 2));\n                const y = 1 + Math.floor(Math.random() * (this.dungeonHeight - height - 2));\n                \n                const room = { x, y, width, height };\n                \n                if (!this.roomOverlaps(room)) {\n                    this.createRoom(room);\n                    this.rooms.push(room);\n                    break;\n                }\n                attempts++;\n            }\n        }\n        \n        // Connect rooms with corridors\n        for (let i = 0; i < this.rooms.length - 1; i++) {\n            this.createCorridor(this.rooms[i], this.rooms[i + 1]);\n        }\n        \n        // Place stairs\n        if (this.rooms.length > 0) {\n            const lastRoom = this.rooms[this.rooms.length - 1];\n            const stairX = lastRoom.x + Math.floor(lastRoom.width / 2);\n            const stairY = lastRoom.y + Math.floor(lastRoom.height / 2);\n            this.dungeon[stairY][stairX] = '>';\n        }\n    }\n    \n    roomOverlaps(newRoom) {\n        for (const room of this.rooms) {\n            if (newRoom.x < room.x + room.width + 1 &&\n                newRoom.x + newRoom.width + 1 > room.x &&\n                newRoom.y < room.y + room.height + 1 &&\n                newRoom.y + newRoom.height + 1 > room.y) {\n                return true;\n            }\n        }\n        return false;\n    }\n    \n    createRoom(room) {\n        for (let y = room.y; y < room.y + room.height; y++) {\n            for (let x = room.x; x < room.x + room.width; x++) {\n                this.dungeon[y][x] = '.';\n            }\n        }\n    }\n    \n    createCorridor(room1, room2) {\n        const x1 = room1.x + Math.floor(room1.width / 2);\n        const y1 = room1.y + Math.floor(room1.height / 2);\n        const x2 = room2.x + Math.floor(room2.width / 2);\n        const y2 = room2.y + Math.floor(room2.height / 2);\n        \n        // Horizontal corridor\n        const startX = Math.min(x1, x2);\n        const endX = Math.max(x1, x2);\n        for (let x = startX; x <= endX; x++) {\n            this.dungeon[y1][x] = '.';\n        }\n        \n        // Vertical corridor\n        const startY = Math.min(y1, y2);\n        const endY = Math.max(y1, y2);\n        for (let y = startY; y <= endY; y++) {\n            this.dungeon[y][x2] = '.';\n        }\n    }\n    \n    placePlayer() {\n        if (this.rooms.length > 0) {\n            const firstRoom = this.rooms[0];\n            this.player.x = firstRoom.x + Math.floor(firstRoom.width / 2);\n            this.player.y = firstRoom.y + Math.floor(firstRoom.height / 2);\n        }\n    }\n    \n    spawnEnemies() {\n        const numEnemies = 3 + Math.floor(Math.random() * 5);\n        \n        for (let i = 0; i < numEnemies; i++) {\n            let placed = false;\n            let attempts = 0;\n            \n            while (!placed && attempts < 100) {\n                const x = Math.floor(Math.random() * this.dungeonWidth);\n                const y = Math.floor(Math.random() * this.dungeonHeight);\n                \n                if (this.dungeon[y][x] === '.' && \n                    (x !== this.player.x || y !== this.player.y) &&\n                    !this.getEnemyAt(x, y)) {\n                    \n                    const enemyType = this.enemyTypes[Math.floor(Math.random() * Math.min(this.enemyTypes.length, this.floor + 1))];\n                    const enemy = {\n                        x: x,\n                        y: y,\n                        name: enemyType.name,\n                        symbol: enemyType.symbol,\n                        hp: enemyType.hp + Math.floor(this.floor / 2),\n                        maxHp: enemyType.hp + Math.floor(this.floor / 2),\n                        attack: enemyType.attack + Math.floor(this.floor / 3),\n                        defense: enemyType.defense + Math.floor(this.floor / 4),\n                        xp: enemyType.xp,\n                        color: enemyType.color\n                    };\n                    \n                    this.enemies.push(enemy);\n                    placed = true;\n                }\n                attempts++;\n            }\n        }\n    }\n    \n    spawnItems() {\n        const numItems = 5 + Math.floor(Math.random() * 8);\n        \n        for (let i = 0; i < numItems; i++) {\n            let placed = false;\n            let attempts = 0;\n            \n            while (!placed && attempts < 100) {\n                const x = Math.floor(Math.random() * this.dungeonWidth);\n                const y = Math.floor(Math.random() * this.dungeonHeight);\n                \n                if (this.dungeon[y][x] === '.' && \n                    (x !== this.player.x || y !== this.player.y) &&\n                    !this.getEnemyAt(x, y) &&\n                    !this.getItemAt(x, y)) {\n                    \n                    const itemCategory = Math.random();\n                    let item;\n                    \n                    if (itemCategory < 0.3) {\n                        // Weapon\n                        const weaponIndex = Math.floor(Math.random() * this.itemTypes.weapons.length);\n                        item = {\n                            ...this.itemTypes.weapons[weaponIndex],\n                            type: 'weapon',\n                            x: x,\n                            y: y\n                        };\n                    } else if (itemCategory < 0.5) {\n                        // Armor\n                        const armorIndex = Math.floor(Math.random() * this.itemTypes.armor.length);\n                        item = {\n                            ...this.itemTypes.armor[armorIndex],\n                            type: 'armor',\n                            x: x,\n                            y: y\n                        };\n                    } else if (itemCategory < 0.7) {\n                        // Potion\n                        const potionIndex = Math.floor(Math.random() * this.itemTypes.potions.length);\n                        item = {\n                            ...this.itemTypes.potions[potionIndex],\n                            type: 'potion',\n                            x: x,\n                            y: y\n                        };\n                    } else if (itemCategory < 0.9) {\n                        // Food\n                        const foodIndex = Math.floor(Math.random() * this.itemTypes.food.length);\n                        item = {\n                            ...this.itemTypes.food[foodIndex],\n                            type: 'food',\n                            x: x,\n                            y: y\n                        };\n                    } else {\n                        // Gold\n                        item = {\n                            name: 'Gold',\n                            symbol: '*',\n                            type: 'gold',\n                            amount: 10 + Math.floor(Math.random() * 50),\n                            x: x,\n                            y: y\n                        };\n                    }\n                    \n                    this.items.push(item);\n                    placed = true;\n                }\n                attempts++;\n            }\n        }\n    }\n    \n    movePlayer(dx, dy) {\n        const newX = this.player.x + dx;\n        const newY = this.player.y + dy;\n        \n        if (newX < 0 || newX >= this.dungeonWidth || \n            newY < 0 || newY >= this.dungeonHeight) {\n            return false;\n        }\n        \n        if (this.dungeon[newY][newX] === '#') {\n            return false;\n        }\n        \n        // Check for enemy\n        const enemy = this.getEnemyAt(newX, newY);\n        if (enemy) {\n            this.attackEnemy(enemy);\n            return true;\n        }\n        \n        // Check for stairs\n        if (this.dungeon[newY][newX] === '>') {\n            this.descendStairs();\n            return true;\n        }\n        \n        this.player.x = newX;\n        this.player.y = newY;\n        return true;\n    }\n    \n    attackEnemy(enemy) {\n        const playerAttack = this.getPlayerAttack();\n        const damage = Math.max(1, playerAttack - enemy.defense + Math.floor(Math.random() * 4) - 2);\n        enemy.hp -= damage;\n        \n        this.addMessage(`You hit the ${enemy.name} for ${damage} damage!`, 'combat');\n        \n        if (enemy.hp <= 0) {\n            this.addMessage(`You killed the ${enemy.name}!`, 'combat');\n            this.player.xp += enemy.xp;\n            this.enemies = this.enemies.filter(e => e !== enemy);\n            this.checkLevelUp();\n        } else {\n            // Enemy attacks back\n            const enemyDamage = Math.max(1, enemy.attack - this.getPlayerDefense() + Math.floor(Math.random() * 4) - 2);\n            this.player.hp -= enemyDamage;\n            this.addMessage(`The ${enemy.name} hits you for ${enemyDamage} damage!`, 'combat');\n            \n            if (this.player.hp <= 0) {\n                this.gameOver();\n            }\n        }\n    }\n    \n    getPlayerAttack() {\n        let attack = this.player.strength;\n        if (this.player.weapon) {\n            attack += this.player.weapon.attack;\n        }\n        return attack;\n    }\n    \n    getPlayerDefense() {\n        let defense = this.player.defense;\n        if (this.player.armor) {\n            defense += this.player.armor.defense;\n        }\n        return defense;\n    }\n    \n    pickupItem() {\n        const item = this.getItemAt(this.player.x, this.player.y);\n        if (!item) {\n            this.addMessage('There is nothing here to pick up.', 'system');\n            return;\n        }\n        \n        if (item.type === 'gold') {\n            this.player.gold += item.amount;\n            this.addMessage(`You found ${item.amount} gold!`, 'item');\n        } else if (item.type === 'weapon') {\n            if (this.player.weapon) {\n                this.addMessage(`You drop your ${this.player.weapon.name}.`, 'item');\n            }\n            this.player.weapon = item;\n            this.addMessage(`You wield the ${item.name}.`, 'item');\n        } else if (item.type === 'armor') {\n            if (this.player.armor) {\n                this.addMessage(`You remove your ${this.player.armor.name}.`, 'item');\n            }\n            this.player.armor = item;\n            this.addMessage(`You wear the ${item.name}.`, 'item');\n        } else {\n            this.player.inventory.push(item);\n            this.addMessage(`You pick up the ${item.name}.`, 'item');\n        }\n        \n        this.items = this.items.filter(i => i !== item);\n    }\n    \n    useItem(item) {\n        if (item.type === 'potion') {\n            if (item.effect === 'heal') {\n                this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.power);\n                this.addMessage(`You drink the ${item.name} and feel better!`, 'item');\n            } else if (item.effect === 'strength') {\n                this.player.strength += item.power;\n                this.addMessage(`You feel stronger!`, 'item');\n            } else if (item.effect === 'defense') {\n                this.player.defense += item.power;\n                this.addMessage(`You feel more protected!`, 'item');\n            }\n        } else if (item.type === 'food') {\n            this.player.food += item.nutrition;\n            this.addMessage(`You eat the ${item.name}. Delicious!`, 'item');\n        }\n        \n        this.player.inventory = this.player.inventory.filter(i => i !== item);\n    }\n    \n    rest() {\n        if (this.player.hp < this.player.maxHp) {\n            this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);\n            this.addMessage('You rest and recover some health.', 'system');\n        } else {\n            this.addMessage('You are already at full health.', 'system');\n        }\n    }\n    \n    enemyTurn() {\n        this.enemies.forEach(enemy => {\n            // Simple AI: move towards player if in sight\n            const dx = this.player.x - enemy.x;\n            const dy = this.player.y - enemy.y;\n            const distance = Math.abs(dx) + Math.abs(dy);\n            \n            if (distance <= 10) {\n                let moveX = 0;\n                let moveY = 0;\n                \n                if (Math.abs(dx) > Math.abs(dy)) {\n                    moveX = dx > 0 ? 1 : -1;\n                } else {\n                    moveY = dy > 0 ? 1 : -1;\n                }\n                \n                const newX = enemy.x + moveX;\n                const newY = enemy.y + moveY;\n                \n                if (newX === this.player.x && newY === this.player.y) {\n                    // Attack player\n                    const damage = Math.max(1, enemy.attack - this.getPlayerDefense() + Math.floor(Math.random() * 4) - 2);\n                    this.player.hp -= damage;\n                    this.addMessage(`The ${enemy.name} attacks you for ${damage} damage!`, 'combat');\n                    \n                    if (this.player.hp <= 0) {\n                        this.gameOver();\n                    }\n                } else if (this.isValidMove(newX, newY)) {\n                    enemy.x = newX;\n                    enemy.y = newY;\n                }\n            }\n        });\n    }\n    \n    isValidMove(x, y) {\n        if (x < 0 || x >= this.dungeonWidth || y < 0 || y >= this.dungeonHeight) {\n            return false;\n        }\n        \n        if (this.dungeon[y][x] === '#') {\n            return false;\n        }\n        \n        if (this.getEnemyAt(x, y)) {\n            return false;\n        }\n        \n        return true;\n    }\n    \n    updateFood() {\n        this.player.food--;\n        if (this.player.food <= 0) {\n            this.player.hp--;\n            this.addMessage('You are starving!', 'combat');\n            if (this.player.hp <= 0) {\n                this.gameOver();\n            }\n        } else if (this.player.food <= 100) {\n            this.addMessage('You are getting hungry.', 'system');\n        }\n    }\n    \n    checkLevelUp() {\n        if (this.player.xp >= this.player.nextLevel) {\n            this.player.level++;\n            this.player.xp -= this.player.nextLevel;\n            this.player.nextLevel = this.player.level * 20;\n            \n            const hpIncrease = 5 + Math.floor(Math.random() * 5);\n            this.player.maxHp += hpIncrease;\n            this.player.hp += hpIncrease;\n            this.player.strength++;\n            this.player.defense++;\n            \n            this.addMessage(`Level up! You are now level ${this.player.level}!`, 'system');\n        }\n    }\n    \n    descendStairs() {\n        this.floor++;\n        this.addMessage(`You descend to floor ${this.floor}.`, 'system');\n        \n        // Reset dungeon\n        this.enemies = [];\n        this.items = [];\n        this.rooms = [];\n        this.initGame();\n        this.generateDungeon();\n        this.placePlayer();\n        this.spawnEnemies();\n        this.spawnItems();\n    }\n    \n    getEnemyAt(x, y) {\n        return this.enemies.find(enemy => enemy.x === x && enemy.y === y);\n    }\n    \n    getItemAt(x, y) {\n        return this.items.find(item => item.x === x && item.y === y);\n    }\n    \n    addMessage(text, type = 'system') {\n        this.messages.push({ text, type });\n        if (this.messages.length > 50) {\n            this.messages.shift();\n        }\n        \n        const messagesDiv = document.getElementById('messages');\n        const messageDiv = document.createElement('div');\n        messageDiv.className = `message ${type}`;\n        messageDiv.textContent = text;\n        messagesDiv.appendChild(messageDiv);\n        messagesDiv.scrollTop = messagesDiv.scrollHeight;\n    }\n    \n    showInventory() {\n        // This is a simple implementation - in a full game you'd want a proper inventory UI\n        if (this.player.inventory.length === 0) {\n            this.addMessage('Your inventory is empty.', 'system');\n        } else {\n            this.addMessage('Inventory:', 'system');\n            this.player.inventory.forEach((item, index) => {\n                this.addMessage(`${index + 1}. ${item.name}`, 'item');\n            });\n        }\n    }\n    \n    gameOver() {\n        this.gameRunning = false;\n        this.addMessage('You have died! Game Over!', 'combat');\n        setTimeout(() => {\n            alert('Game Over! Refresh to play again.');\n        }, 1000);\n    }\n    \n    render() {\n        let display = '';\n        \n        for (let y = 0; y < this.dungeonHeight; y++) {\n            for (let x = 0; x < this.dungeonWidth; x++) {\n                let char = this.dungeon[y][x];\n                let className = '';\n                \n                // Check for player\n                if (x === this.player.x && y === this.player.y) {\n                    char = '@';\n                    className = 'player';\n                } else {\n                    // Check for enemies\n                    const enemy = this.getEnemyAt(x, y);\n                    if (enemy) {\n                        char = enemy.symbol;\n                        className = 'enemy';\n                    } else {\n                        // Check for items\n                        const item = this.getItemAt(x, y);\n                        if (item) {\n                            char = item.symbol;\n                            className = item.type;\n                        } else {\n                            // Terrain\n                            if (char === '#') {\n                                className = 'wall';\n                            } else if (char === '.') {\n                                className = 'floor';\n                            } else if (char === '>') {\n                                className = 'stairs';\n                            }\n                        }\n                    }\n                }\n                \n                if (className) {\n                    display += `<span class=\"${className}\">${char}</span>`;\n                } else {\n                    display += char;\n                }\n            }\n            display += '\\n';\n        }\n        \n        document.getElementById('dungeon').innerHTML = display;\n    }\n    \n    updateUI() {\n        document.getElementById('level').textContent = this.player.level;\n        document.getElementById('hp').textContent = this.player.hp;\n        document.getElementById('maxHp').textContent = this.player.maxHp;\n        document.getElementById('xp').textContent = this.player.xp;\n        document.getElementById('nextLevel').textContent = this.player.nextLevel;\n        document.getElementById('strength').textContent = this.player.strength;\n        document.getElementById('defense').textContent = this.player.defense;\n        document.getElementById('gold').textContent = this.player.gold;\n        document.getElementById('food').textContent = this.player.food;\n        document.getElementById('floor').textContent = this.floor;\n        \n        const weaponText = this.player.weapon ? \n            `${this.player.weapon.name} (+${this.player.weapon.attack})` : \n            'Fists (+0)';\n        document.getElementById('currentWeapon').textContent = weaponText;\n        \n        const armorText = this.player.armor ? \n            `${this.player.armor.name} (+${this.player.armor.defense})` : \n            'None (+0)';\n        document.getElementById('currentArmor').textContent = armorText;\n        \n        const inventoryDiv = document.getElementById('inventoryItems');\n        inventoryDiv.innerHTML = '';\n        this.player.inventory.forEach((item, index) => {\n            const itemDiv = document.createElement('div');\n            itemDiv.textContent = `${index + 1}. ${item.name}`;\n            itemDiv.style.cursor = 'pointer';\n            itemDiv.onclick = () => this.useItem(item);\n            inventoryDiv.appendChild(itemDiv);\n        });\n    }\n}\n\n// Start the game\nwindow.onload = () => {\n    const game = new Rogue();\n    game.addMessage('Welcome to Rogue! Find the stairs (>) to descend deeper.', 'system');\n    game.addMessage('Use WASD to move, E to pick up items, Space to wait.', 'system');\n};
+        ];
+        
+        this.itemTypes = {
+            weapons: [
+                { name: 'Dagger', symbol: ')', attack: 3, value: 10 },
+                { name: 'Short Sword', symbol: ')', attack: 5, value: 25 },
+                { name: 'Long Sword', symbol: ')', attack: 8, value: 50 },
+                { name: 'Battle Axe', symbol: ')', attack: 12, value: 100 },
+                { name: 'Magic Sword', symbol: ')', attack: 15, value: 200 }
+            ],
+            armor: [
+                { name: 'Leather Armor', symbol: ']', defense: 2, value: 15 },
+                { name: 'Chain Mail', symbol: ']', defense: 4, value: 40 },
+                { name: 'Plate Mail', symbol: ']', defense: 6, value: 80 },
+                { name: 'Magic Armor', symbol: ']', defense: 10, value: 150 }
+            ],
+            potions: [
+                { name: 'Healing Potion', symbol: '!', effect: 'heal', power: 10, value: 20 },
+                { name: 'Strength Potion', symbol: '!', effect: 'strength', power: 2, value: 50 },
+                { name: 'Defense Potion', symbol: '!', effect: 'defense', power: 2, value: 50 }
+            ],
+            food: [
+                { name: 'Ration', symbol: '%', nutrition: 200, value: 5 },
+                { name: 'Bread', symbol: '%', nutrition: 100, value: 3 }
+            ]
+        };
+        
+        this.initGame();
+        this.setupControls();
+        this.generateDungeon();
+        this.placePlayer();
+        this.spawnEnemies();
+        this.spawnItems();
+        this.render();
+        this.updateUI();
+    }
+    
+    initGame() {
+        // Initialize dungeon with walls
+        for (let y = 0; y < this.dungeonHeight; y++) {
+            this.dungeon[y] = [];
+            for (let x = 0; x < this.dungeonWidth; x++) {
+                this.dungeon[y][x] = '#'; // Wall
+            }
+        }
+    }
+    
+    setupControls() {
+        document.addEventListener('keydown', (e) => {
+            if (!this.gameRunning) return;
+            
+            let moved = false;
+            
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    moved = this.movePlayer(0, -1);
+                    break;
+                case 's':
+                case 'arrowdown':
+                    moved = this.movePlayer(0, 1);
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    moved = this.movePlayer(-1, 0);
+                    break;
+                case 'd':
+                case 'arrowright':
+                    moved = this.movePlayer(1, 0);
+                    break;
+                case 'e':
+                    this.pickupItem();
+                    moved = true;
+                    break;
+                case ' ':
+                    // Wait
+                    moved = true;
+                    break;
+                case 'r':
+                    this.rest();
+                    moved = true;
+                    break;
+                case 'i':
+                    this.showInventory();
+                    break;
+            }
+            
+            if (moved) {
+                this.enemyTurn();
+                this.updateFood();
+                this.render();
+                this.updateUI();
+            }
+        });
+    }
+    
+    generateDungeon() {
+        // Generate rooms
+        const numRooms = 6 + Math.floor(Math.random() * 4);
+        
+        for (let i = 0; i < numRooms; i++) {
+            let attempts = 0;
+            while (attempts < 50) {
+                const width = 4 + Math.floor(Math.random() * 8);
+                const height = 3 + Math.floor(Math.random() * 6);
+                const x = 1 + Math.floor(Math.random() * (this.dungeonWidth - width - 2));
+                const y = 1 + Math.floor(Math.random() * (this.dungeonHeight - height - 2));
+                
+                const room = { x, y, width, height };
+                
+                if (!this.roomOverlaps(room)) {
+                    this.createRoom(room);
+                    this.rooms.push(room);
+                    break;
+                }
+                attempts++;
+            }
+        }
+        
+        // Connect rooms with corridors
+        for (let i = 0; i < this.rooms.length - 1; i++) {
+            this.createCorridor(this.rooms[i], this.rooms[i + 1]);
+        }
+        
+        // Place stairs
+        if (this.rooms.length > 0) {
+            const lastRoom = this.rooms[this.rooms.length - 1];
+            const stairX = lastRoom.x + Math.floor(lastRoom.width / 2);
+            const stairY = lastRoom.y + Math.floor(lastRoom.height / 2);
+            this.dungeon[stairY][stairX] = '>';
+        }
+    }
+    
+    roomOverlaps(newRoom) {
+        for (const room of this.rooms) {
+            if (newRoom.x < room.x + room.width + 1 &&
+                newRoom.x + newRoom.width + 1 > room.x &&
+                newRoom.y < room.y + room.height + 1 &&
+                newRoom.y + newRoom.height + 1 > room.y) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    createRoom(room) {
+        for (let y = room.y; y < room.y + room.height; y++) {
+            for (let x = room.x; x < room.x + room.width; x++) {
+                this.dungeon[y][x] = '.';
+            }
+        }
+    }
+    
+    createCorridor(room1, room2) {
+        const x1 = room1.x + Math.floor(room1.width / 2);
+        const y1 = room1.y + Math.floor(room1.height / 2);
+        const x2 = room2.x + Math.floor(room2.width / 2);
+        const y2 = room2.y + Math.floor(room2.height / 2);
+        
+        // Horizontal corridor
+        const startX = Math.min(x1, x2);
+        const endX = Math.max(x1, x2);
+        for (let x = startX; x <= endX; x++) {
+            this.dungeon[y1][x] = '.';
+        }
+        
+        // Vertical corridor
+        const startY = Math.min(y1, y2);
+        const endY = Math.max(y1, y2);
+        for (let y = startY; y <= endY; y++) {
+            this.dungeon[y][x2] = '.';
+        }
+    }
+    
+    placePlayer() {
+        if (this.rooms.length > 0) {
+            const firstRoom = this.rooms[0];
+            this.player.x = firstRoom.x + Math.floor(firstRoom.width / 2);
+            this.player.y = firstRoom.y + Math.floor(firstRoom.height / 2);
+        }
+    }
+    
+    spawnEnemies() {
+        const numEnemies = 3 + Math.floor(Math.random() * 5);
+        
+        for (let i = 0; i < numEnemies; i++) {
+            let placed = false;
+            let attempts = 0;
+            
+            while (!placed && attempts < 100) {
+                const x = Math.floor(Math.random() * this.dungeonWidth);
+                const y = Math.floor(Math.random() * this.dungeonHeight);
+                
+                if (this.dungeon[y][x] === '.' && 
+                    (x !== this.player.x || y !== this.player.y) &&
+                    !this.getEnemyAt(x, y)) {
+                    
+                    const enemyType = this.enemyTypes[Math.floor(Math.random() * Math.min(this.enemyTypes.length, this.floor + 1))];
+                    const enemy = {
+                        x: x,
+                        y: y,
+                        name: enemyType.name,
+                        symbol: enemyType.symbol,
+                        hp: enemyType.hp + Math.floor(this.floor / 2),
+                        maxHp: enemyType.hp + Math.floor(this.floor / 2),
+                        attack: enemyType.attack + Math.floor(this.floor / 3),
+                        defense: enemyType.defense + Math.floor(this.floor / 4),
+                        xp: enemyType.xp,
+                        color: enemyType.color
+                    };
+                    
+                    this.enemies.push(enemy);
+                    placed = true;
+                }
+                attempts++;
+            }
+        }
+    }
+    
+    spawnItems() {
+        const numItems = 5 + Math.floor(Math.random() * 8);
+        
+        for (let i = 0; i < numItems; i++) {
+            let placed = false;
+            let attempts = 0;
+            
+            while (!placed && attempts < 100) {
+                const x = Math.floor(Math.random() * this.dungeonWidth);
+                const y = Math.floor(Math.random() * this.dungeonHeight);
+                
+                if (this.dungeon[y][x] === '.' && 
+                    (x !== this.player.x || y !== this.player.y) &&
+                    !this.getEnemyAt(x, y) &&
+                    !this.getItemAt(x, y)) {
+                    
+                    const itemCategory = Math.random();
+                    let item;
+                    
+                    if (itemCategory < 0.3) {
+                        // Weapon
+                        const weaponIndex = Math.floor(Math.random() * this.itemTypes.weapons.length);
+                        item = {
+                            ...this.itemTypes.weapons[weaponIndex],
+                            type: 'weapon',
+                            x: x,
+                            y: y
+                        };
+                    } else if (itemCategory < 0.5) {
+                        // Armor
+                        const armorIndex = Math.floor(Math.random() * this.itemTypes.armor.length);
+                        item = {
+                            ...this.itemTypes.armor[armorIndex],
+                            type: 'armor',
+                            x: x,
+                            y: y
+                        };
+                    } else if (itemCategory < 0.7) {
+                        // Potion
+                        const potionIndex = Math.floor(Math.random() * this.itemTypes.potions.length);
+                        item = {
+                            ...this.itemTypes.potions[potionIndex],
+                            type: 'potion',
+                            x: x,
+                            y: y
+                        };
+                    } else if (itemCategory < 0.9) {
+                        // Food
+                        const foodIndex = Math.floor(Math.random() * this.itemTypes.food.length);
+                        item = {
+                            ...this.itemTypes.food[foodIndex],
+                            type: 'food',
+                            x: x,
+                            y: y
+                        };
+                    } else {
+                        // Gold
+                        item = {
+                            name: 'Gold',
+                            symbol: '*',
+                            type: 'gold',
+                            amount: 10 + Math.floor(Math.random() * 50),
+                            x: x,
+                            y: y
+                        };
+                    }
+                    
+                    this.items.push(item);
+                    placed = true;
+                }
+                attempts++;
+            }
+        }
+    }
+    
+    movePlayer(dx, dy) {
+        const newX = this.player.x + dx;
+        const newY = this.player.y + dy;
+        
+        if (newX < 0 || newX >= this.dungeonWidth || 
+            newY < 0 || newY >= this.dungeonHeight) {
+            return false;
+        }
+        
+        if (this.dungeon[newY][newX] === '#') {
+            return false;
+        }
+        
+        // Check for enemy
+        const enemy = this.getEnemyAt(newX, newY);
+        if (enemy) {
+            this.attackEnemy(enemy);
+            return true;
+        }
+        
+        // Check for stairs
+        if (this.dungeon[newY][newX] === '>') {
+            this.descendStairs();
+            return true;
+        }
+        
+        this.player.x = newX;
+        this.player.y = newY;
+        return true;
+    }
+    
+    attackEnemy(enemy) {
+        const playerAttack = this.getPlayerAttack();
+        const damage = Math.max(1, playerAttack - enemy.defense + Math.floor(Math.random() * 4) - 2);
+        enemy.hp -= damage;
+        
+        this.addMessage(`You hit the ${enemy.name} for ${damage} damage!`, 'combat');
+        
+        if (enemy.hp <= 0) {
+            this.addMessage(`You killed the ${enemy.name}!`, 'combat');
+            this.player.xp += enemy.xp;
+            this.enemies = this.enemies.filter(e => e !== enemy);
+            this.checkLevelUp();
+        } else {
+            // Enemy attacks back
+            const enemyDamage = Math.max(1, enemy.attack - this.getPlayerDefense() + Math.floor(Math.random() * 4) - 2);
+            this.player.hp -= enemyDamage;
+            this.addMessage(`The ${enemy.name} hits you for ${enemyDamage} damage!`, 'combat');
+            
+            if (this.player.hp <= 0) {
+                this.gameOver();
+            }
+        }
+    }
+    
+    getPlayerAttack() {
+        let attack = this.player.strength;
+        if (this.player.weapon) {
+            attack += this.player.weapon.attack;
+        }
+        return attack;
+    }
+    
+    getPlayerDefense() {
+        let defense = this.player.defense;
+        if (this.player.armor) {
+            defense += this.player.armor.defense;
+        }
+        return defense;
+    }
+    
+    pickupItem() {
+        const item = this.getItemAt(this.player.x, this.player.y);
+        if (!item) {
+            this.addMessage('There is nothing here to pick up.', 'system');
+            return;
+        }
+        
+        if (item.type === 'gold') {
+            this.player.gold += item.amount;
+            this.addMessage(`You found ${item.amount} gold!`, 'item');
+        } else if (item.type === 'weapon') {
+            if (this.player.weapon) {
+                this.addMessage(`You drop your ${this.player.weapon.name}.`, 'item');
+            }
+            this.player.weapon = item;
+            this.addMessage(`You wield the ${item.name}.`, 'item');
+        } else if (item.type === 'armor') {
+            if (this.player.armor) {
+                this.addMessage(`You remove your ${this.player.armor.name}.`, 'item');
+            }
+            this.player.armor = item;
+            this.addMessage(`You wear the ${item.name}.`, 'item');
+        } else {
+            this.player.inventory.push(item);
+            this.addMessage(`You pick up the ${item.name}.`, 'item');
+        }
+        
+        this.items = this.items.filter(i => i !== item);
+    }
+    
+    useItem(item) {
+        if (item.type === 'potion') {
+            if (item.effect === 'heal') {
+                this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.power);
+                this.addMessage(`You drink the ${item.name} and feel better!`, 'item');
+            } else if (item.effect === 'strength') {
+                this.player.strength += item.power;
+                this.addMessage(`You feel stronger!`, 'item');
+            } else if (item.effect === 'defense') {
+                this.player.defense += item.power;
+                this.addMessage(`You feel more protected!`, 'item');
+            }
+        } else if (item.type === 'food') {
+            this.player.food += item.nutrition;
+            this.addMessage(`You eat the ${item.name}. Delicious!`, 'item');
+        }
+        
+        this.player.inventory = this.player.inventory.filter(i => i !== item);
+    }
+    
+    rest() {
+        if (this.player.hp < this.player.maxHp) {
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+            this.addMessage('You rest and recover some health.', 'system');
+        } else {
+            this.addMessage('You are already at full health.', 'system');
+        }
+    }
+    
+    enemyTurn() {
+        this.enemies.forEach(enemy => {
+            // Simple AI: move towards player if in sight
+            const dx = this.player.x - enemy.x;
+            const dy = this.player.y - enemy.y;
+            const distance = Math.abs(dx) + Math.abs(dy);
+            
+            if (distance <= 10) {
+                let moveX = 0;
+                let moveY = 0;
+                
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    moveX = dx > 0 ? 1 : -1;
+                } else {
+                    moveY = dy > 0 ? 1 : -1;
+                }
+                
+                const newX = enemy.x + moveX;
+                const newY = enemy.y + moveY;
+                
+                if (newX === this.player.x && newY === this.player.y) {
+                    // Attack player
+                    const damage = Math.max(1, enemy.attack - this.getPlayerDefense() + Math.floor(Math.random() * 4) - 2);
+                    this.player.hp -= damage;
+                    this.addMessage(`The ${enemy.name} attacks you for ${damage} damage!`, 'combat');
+                    
+                    if (this.player.hp <= 0) {
+                        this.gameOver();
+                    }
+                } else if (this.isValidMove(newX, newY)) {
+                    enemy.x = newX;
+                    enemy.y = newY;
+                }
+            }
+        });
+    }
+    
+    isValidMove(x, y) {
+        if (x < 0 || x >= this.dungeonWidth || y < 0 || y >= this.dungeonHeight) {
+            return false;
+        }
+        
+        if (this.dungeon[y][x] === '#') {
+            return false;
+        }
+        
+        if (this.getEnemyAt(x, y)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    updateFood() {
+        this.player.food--;
+        if (this.player.food <= 0) {
+            this.player.hp--;
+            this.addMessage('You are starving!', 'combat');
+            if (this.player.hp <= 0) {
+                this.gameOver();
+            }
+        } else if (this.player.food <= 100) {
+            this.addMessage('You are getting hungry.', 'system');
+        }
+    }
+    
+    checkLevelUp() {
+        if (this.player.xp >= this.player.nextLevel) {
+            this.player.level++;
+            this.player.xp -= this.player.nextLevel;
+            this.player.nextLevel = this.player.level * 20;
+            
+            const hpIncrease = 5 + Math.floor(Math.random() * 5);
+            this.player.maxHp += hpIncrease;
+            this.player.hp += hpIncrease;
+            this.player.strength++;
+            this.player.defense++;
+            
+            this.addMessage(`Level up! You are now level ${this.player.level}!`, 'system');
+        }
+    }
+    
+    descendStairs() {
+        this.floor++;
+        this.addMessage(`You descend to floor ${this.floor}.`, 'system');
+        
+        // Reset dungeon
+        this.enemies = [];
+        this.items = [];
+        this.rooms = [];
+        this.initGame();
+        this.generateDungeon();
+        this.placePlayer();
+        this.spawnEnemies();
+        this.spawnItems();
+    }
+    
+    getEnemyAt(x, y) {
+        return this.enemies.find(enemy => enemy.x === x && enemy.y === y);
+    }
+    
+    getItemAt(x, y) {
+        return this.items.find(item => item.x === x && item.y === y);
+    }
+    
+    addMessage(text, type = 'system') {
+        this.messages.push({ text, type });
+        if (this.messages.length > 50) {
+            this.messages.shift();
+        }
+        
+        const messagesDiv = document.getElementById('messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = text;
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    showInventory() {
+        // This is a simple implementation - in a full game you'd want a proper inventory UI
+        if (this.player.inventory.length === 0) {
+            this.addMessage('Your inventory is empty.', 'system');
+        } else {
+            this.addMessage('Inventory:', 'system');
+            this.player.inventory.forEach((item, index) => {
+                this.addMessage(`${index + 1}. ${item.name}`, 'item');
+            });
+        }
+    }
+    
+    gameOver() {
+        this.gameRunning = false;
+        this.addMessage('You have died! Game Over!', 'combat');
+        setTimeout(() => {
+            alert('Game Over! Refresh to play again.');
+        }, 1000);
+    }
+    
+    render() {
+        let display = '';
+        
+        for (let y = 0; y < this.dungeonHeight; y++) {
+            for (let x = 0; x < this.dungeonWidth; x++) {
+                let char = this.dungeon[y][x];
+                let className = '';
+                
+                // Check for player
+                if (x === this.player.x && y === this.player.y) {
+                    char = '@';
+                    className = 'player';
+                } else {
+                    // Check for enemies
+                    const enemy = this.getEnemyAt(x, y);
+                    if (enemy) {
+                        char = enemy.symbol;
+                        className = 'enemy';
+                    } else {
+                        // Check for items
+                        const item = this.getItemAt(x, y);
+                        if (item) {
+                            char = item.symbol;
+                            className = item.type;
+                        } else {
+                            // Terrain
+                            if (char === '#') {
+                                className = 'wall';
+                            } else if (char === '.') {
+                                className = 'floor';
+                            } else if (char === '>') {
+                                className = 'stairs';
+                            }
+                        }
+                    }
+                }
+                
+                if (className) {
+                    display += `<span class="${className}">${char}</span>`;
+                } else {
+                    display += char;
+                }
+            }
+            display += '\n';
+        }
+        
+        document.getElementById('dungeon').innerHTML = display;
+    }
+    
+    updateUI() {
+        document.getElementById('level').textContent = this.player.level;
+        document.getElementById('hp').textContent = this.player.hp;
+        document.getElementById('maxHp').textContent = this.player.maxHp;
+        document.getElementById('xp').textContent = this.player.xp;
+        document.getElementById('nextLevel').textContent = this.player.nextLevel;
+        document.getElementById('strength').textContent = this.player.strength;
+        document.getElementById('defense').textContent = this.player.defense;
+        document.getElementById('gold').textContent = this.player.gold;
+        document.getElementById('food').textContent = this.player.food;
+        document.getElementById('floor').textContent = this.floor;
+        
+        const weaponText = this.player.weapon ? 
+            `${this.player.weapon.name} (+${this.player.weapon.attack})` : 
+            'Fists (+0)';
+        document.getElementById('currentWeapon').textContent = weaponText;
+        
+        const armorText = this.player.armor ? 
+            `${this.player.armor.name} (+${this.player.armor.defense})` : 
+            'None (+0)';
+        document.getElementById('currentArmor').textContent = armorText;
+        
+        const inventoryDiv = document.getElementById('inventoryItems');
+        inventoryDiv.innerHTML = '';
+        this.player.inventory.forEach((item, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.textContent = `${index + 1}. ${item.name}`;
+            itemDiv.style.cursor = 'pointer';
+            itemDiv.onclick = () => this.useItem(item);
+            inventoryDiv.appendChild(itemDiv);
+        });
+    }
+}
+
+// Start the game
+window.onload = () => {
+    const game = new Rogue();
+    game.addMessage('Welcome to Rogue! Find the stairs (>) to descend deeper.', 'system');
+    game.addMessage('Use WASD to move, E to pick up items, Space to wait.', 'system');
+};
