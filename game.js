@@ -379,9 +379,34 @@ class DragonQuest {
     }
     
     gameOver() {
+        this.endBattle();
         this.showDialog(
-            'ゲームオーバー<br><br>勇者の冒険はここで終わった...',
-            [{ text: '最初から', action: () => location.reload() }]
+            'ゲームオーバー<br><br>勇者は力尽きた...<br><br>どうしますか？',
+            [
+                { text: '復活する（ゴールド半分）', action: () => this.revive() },
+                { text: '最初から', action: () => location.reload() }
+            ]
+        );
+    }
+    
+    revive() {
+        this.player.hp = Math.floor(this.player.maxHp / 2);
+        this.player.gold = Math.floor(this.player.gold / 2);
+        
+        this.player.x = 250;
+        this.player.y = 150;
+        const playerElement = document.getElementById('player');
+        playerElement.style.left = this.player.x + 'px';
+        playerElement.style.top = this.player.y + 'px';
+        
+        this.updateStatus();
+        
+        this.showDialog(
+            `勇者は生き返った！<br><br>` +
+            `HPが${this.player.hp}に回復しました。<br>` +
+            `ゴールドが${this.player.gold}に減ってしまいました。<br><br>` +
+            `気を取り直して冒険を続けましょう！`,
+            [{ text: 'はい', action: () => this.closeDialog() }]
         );
     }
     
