@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rogue - Classic Dungeon Crawler</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #00FF00;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            display: flex;
+            height: 100vh;
+            background: #000;
+        }
+        
+        #gameArea {
+            flex: 3;
+            padding: 10px;
+            background: #000;
+        }
+        
+        #dungeon {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 14px;
+            white-space: pre;
+            background: #000;
+            color: #00FF00;
+            border: 2px solid #00AA00;
+            padding: 10px;
+            width: fit-content;
+            letter-spacing: 2px;
+        }
+        
+        #sidebar {
+            flex: 1;
+            padding: 10px;
+            background: #111;
+            border-left: 2px solid #00AA00;
+            min-width: 250px;
+        }
+        
+        #playerStats {
+            border: 1px solid #00AA00;
+            padding: 10px;
+            margin-bottom: 20px;
+            background: #000;
+        }
+        
+        #messageLog {
+            border: 1px solid #00AA00;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            background: #000;
+            margin-bottom: 20px;
+        }
+        
+        #inventory {
+            border: 1px solid #00AA00;
+            padding: 10px;
+            background: #000;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin: 2px 0;
+            color: #00FF00;
+        }
+        
+        .message.combat {
+            color: #FF4444;
+        }
+        
+        .message.item {
+            color: #FFFF00;
+        }
+        
+        .message.system {
+            color: #00AAFF;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #00AA00;
+            font-size: 12px;
+        }
+        
+        .player {
+            color: #FFFF00 !important;
+            font-weight: bold;
+        }
+        
+        .enemy {
+            color: #FF0000 !important;
+            font-weight: bold;
+        }
+        
+        .item {
+            color: #00FFFF !important;
+        }
+        
+        .wall {
+            color: #AAAAAA !important;
+        }
+        
+        .floor {
+            color: #444444 !important;
+        }
+        
+        .stairs {
+            color: #FFFFFF !important;
+            font-weight: bold;
+        }
+        
+        .door {
+            color: #8B4513 !important;
+        }
+        
+        .gold {
+            color: #FFD700 !important;
+        }
+        
+        .food {
+            color: #90EE90 !important;
+        }
+        
+        .weapon {
+            color: #C0C0C0 !important;
+        }
+        
+        .armor {
+            color: #DAA520 !important;
+        }
+        
+        .potion {
+            color: #FF69B4 !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="gameArea">
+            <div id="dungeon"></div>
+        </div>
+        
+        <div id="sidebar">
+            <div id="playerStats">
+                <h3>Player Stats</h3>
+                <div>Level: <span id="level">1</span></div>
+                <div>HP: <span id="hp">20</span>/<span id="maxHp">20</span></div>
+                <div>XP: <span id="xp">0</span>/<span id="nextLevel">20</span></div>
+                <div>Strength: <span id="strength">10</span></div>
+                <div>Defense: <span id="defense">10</span></div>
+                <div>Gold: <span id="gold">0</span></div>
+                <div>Food: <span id="food">1000</span></div>
+                <div>Floor: <span id="floor">1</span></div>
+            </div>
+            
+            <div id="messageLog">
+                <h4>Message Log</h4>
+                <div id="messages"></div>
+            </div>
+            
+            <div id="inventory">
+                <h4>Inventory</h4>
+                <div>Weapon: <span id="currentWeapon">Fists (+0)</span></div>
+                <div>Armor: <span id="currentArmor">None (+0)</span></div>
+                <div id="inventoryItems"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="controls">
+        Controls: WASD/Arrow Keys = Move | E = Pick up item | Space = Wait | R = Rest | I = Inventory
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>

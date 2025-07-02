@@ -28,6 +28,18 @@ HTML5/JavaScriptで作られたクラシックゲームのコレクションで�
 
 **技術:** HTML5, CSS3, JavaScript ES6
 
+### [Rogue](./rogue/)
+クラシックなローグライクダンジョン探索ゲーム
+
+**特徴:**
+- ランダム生成ダンジョン
+- ターンベース戦闘システム
+- ASCII文字ベース表示
+- 敵AI・アイテム・レベルアップシステム
+- 飢餓システムと生存要素
+
+**技術:** HTML5, CSS3, JavaScript ES6
+
 ---
 
 ## 🛠️ 開発について
@@ -49,6 +61,10 @@ my-vibes2/
 │   ├── game.js
 │   └── README.md
 ├── mario-bros-1/
+│   ├── index.html
+│   ├── game.js
+│   └── README.md
+├── rogue/
 │   ├── index.html
 │   ├── game.js
 │   └── README.md
