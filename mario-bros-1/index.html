@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Mario Bros 1</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #5C94FC;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #5C94FC 0%, #5C94FC 80%, #00AA00 80%, #00AA00 100%);
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: transparent;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 16px;
+            z-index: 100;
+        }
+        
+        #mario {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: #FF0000;
+            border: 2px solid #AA0000;
+            bottom: 200px;
+            left: 100px;
+            z-index: 10;
+        }
+        
+        .block {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: #8B4513;
+            border: 2px solid #654321;
+            z-index: 5;
+        }
+        
+        .brick {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: #CD853F;
+            border: 2px solid #8B4513;
+            z-index: 5;
+        }
+        
+        .pipe {
+            position: absolute;
+            background: #00AA00;
+            border: 2px solid #008800;
+            z-index: 5;
+        }
+        
+        .enemy {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: #8B4513;
+            border: 2px solid #654321;
+            border-radius: 50%;
+            z-index: 8;
+        }
+        
+        .powerup {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: #FF6B6B;
+            border: 2px solid #FF0000;
+            border-radius: 50%;
+            z-index: 8;
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 20px;
+            z-index: 1;
+        }
+        
+        .hill {
+            position: absolute;
+            background: #32CD32;
+            border-radius: 50%;
+            bottom: 0;
+            z-index: 2;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .mario-small {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .mario-big {
+            width: 32px;
+            height: 48px;
+        }
+        
+        .mario-fire {
+            width: 32px;
+            height: 48px;
+            background: #FF8C00 !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <div>MARIO: <span id="score">000000</span></div>
+            <div>COINS: <span id="coins">00</span></div>
+            <div>WORLD: <span id="world">1-1</span></div>
+            <div>TIME: <span id="time">400</span></div>
+            <div>LIVES: <span id="lives">3</span></div>
+        </div>
+        
+        <div id="mario"></div>
+        
+        <div id="controls">
+            Controls: A/D or ←/→ = Move | W or ↑ = Jump | S or ↓ = Duck
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
