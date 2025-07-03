@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Flux - 記憶流動</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #0a0a0a, #1a1a2e, #16213e);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #444;
+            box-shadow: 0 0 30px rgba(100, 100, 255, 0.3);
+            cursor: crosshair;
+        }
+        
+        .ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: #ccc;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        
+        .memory-bar {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 200px;
+            height: 20px;
+            border: 2px solid #666;
+            background: #222;
+            z-index: 10;
+        }
+        
+        .memory-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+            transition: width 0.3s ease;
+        }
+        
+        .instructions {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            color: #888;
+            font-size: 12px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        
+        .phase-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 20;
+        }
+        
+        .glitch {
+            animation: glitch 0.1s infinite;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(-50%, -50%) skew(0deg); }
+            25% { transform: translate(-51%, -49%) skew(1deg); }
+            50% { transform: translate(-49%, -51%) skew(-1deg); }
+            75% { transform: translate(-51%, -50%) skew(0.5deg); }
+            100% { transform: translate(-50%, -50%) skew(0deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <div>段階: <span id="phase">記憶</span></div>
+        <div>スコア: <span id="score">0</span></div>
+        <div>回答: <span id="answered">0</span>/10</div>
+    </div>
+    
+    <div class="memory-bar">
+        <div class="memory-fill" id="memoryFill" style="width: 100%;"></div>
+    </div>
+    
+    <div class="instructions">
+        <div>記憶段階: オブジェクトの位置と色を覚える</div>
+        <div>回答段階: 記憶した内容をクリックで選択</div>
+        <div>注意: 時間と共に記憶が変化します</div>
+    </div>
+    
+    <div class="phase-indicator" id="phaseIndicator">記憶フェーズ</div>
+    
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <script src="game.js"></script>
+</body>
+</html>
