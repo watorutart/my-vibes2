@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逆転裁判 - 第1話「初回法廷」</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Title Screen */
+        .title-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #2c1810 0%, #8b4513 50%, #daa520 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .title-screen h1 {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            color: #daa520;
+            animation: titlePulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titlePulse {
+            0% { text-shadow: 3px 3px 6px rgba(0,0,0,0.8); }
+            100% { text-shadow: 3px 3px 15px rgba(218,165,32,0.8); }
+        }
+
+        .start-button {
+            background: linear-gradient(45deg, #8b4513, #daa520);
+            border: 3px solid #fff;
+            padding: 20px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(139, 69, 19, 0.5);
+        }
+
+        /* Game Screen */
+        .game-screen {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+        }
+
+        .game-screen.active {
+            display: flex;
+        }
+
+        /* Court Background */
+        .court-background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                #8b4513 0%, 
+                #a0522d 20%, 
+                #daa520 40%, 
+                #cd853f 60%, 
+                #8b4513 100%);
+            background-image: 
+                repeating-linear-gradient(90deg, transparent, transparent 100px, rgba(0,0,0,0.1) 101px, rgba(0,0,0,0.1) 102px),
+                radial-gradient(circle at 50% 30%, rgba(255,255,255,0.1) 0%, transparent 50%);
+        }
+
+        .court-background::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(to top, #654321, #8b4513);
+            border-top: 5px solid #daa520;
+        }
+
+        /* UI Area */
+        .ui-area {
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        /* Character Area */
+        .character-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 50px;
+        }
+
+        .character {
+            width: 200px;
+            height: 300px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            border: 3px solid #daa520;
+            transition: all 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .character::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1), transparent);
+            pointer-events: none;
+        }
+
+        .character.phoenix {
+            background: linear-gradient(145deg, #1e3a8a, #3b82f6);
+        }
+
+        .character.prosecutor {
+            background: linear-gradient(145deg, #7f1d1d, #dc2626);
+        }
+
+        .character.judge {
+            background: linear-gradient(145deg, #374151, #6b7280);
+        }
+
+        .character.witness {
+            background: linear-gradient(145deg, #065f46, #10b981);
+        }
+
+        .character-name {
+            position: absolute;
+            bottom: 10px;
+            font-size: 1rem;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .character.speaking {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(218,165,32,0.8);
+            animation: speaking 0.5s ease;
+        }
+
+        @keyframes speaking {
+            0%, 100% { transform: scale(1.05); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Text Box */
+        .text-box {
+            height: 200px;
+            background: linear-gradient(145deg, #1f2937, #374151);
+            border: 3px solid #daa520;
+            border-radius: 15px 15px 0 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .speaker-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #daa520;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .dialogue-text {
+            flex: 1;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #f3f4f6;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .dialogue-text.typing {
+            animation: typing 0.1s ease;
+        }
+
+        @keyframes typing {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+
+        .continue-indicator {
+            color: #daa520;
+            font-size: 1.5rem;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: linear-gradient(45deg, #8b4513, #daa520);
+            border: 2px solid #fff;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.4);
+        }
+
+        .action-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Court Record */
+        .court-record {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #daa520;
+            border-radius: 10px;
+            padding: 15px;
+            min-width: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .court-record h3 {
+            color: #daa520;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .evidence-item {
+            background: rgba(139, 69, 19, 0.3);
+            border: 1px solid #8b4513;
+            border-radius: 5px;
+            padding: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .evidence-item:hover {
+            background: rgba(139, 69, 19, 0.6);
+            border-color: #daa520;
+        }
+
+        .evidence-name {
+            font-weight: bold;
+            color: #daa520;
+            font-size: 0.9rem;
+        }
+
+        .evidence-desc {
+            font-size: 0.8rem;
+            color: #ccc;
+            margin-top: 3px;
+        }
+
+        /* Health Bar */
+        .health-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 250px;
+            height: 30px;
+            background: #333;
+            border: 3px solid #daa520;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #dc2626, #fbbf24, #10b981);
+            transition: width 0.5s ease;
+            width: 100%;
+        }
+
+        .health-label {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            color: #daa520;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Special Effects */
+        .objection-effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 6rem;
+            font-weight: bold;
+            color: #dc2626;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.8);
+            z-index: 100;
+            animation: objection 2s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes objection {
+            0% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(0.5); 
+            }
+            20% { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1.2); 
+            }
+            80% { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1); 
+            }
+            100% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(0.8); 
+            }
+        }
+
+        .flash-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 50;
+            animation: flash 0.3s ease;
+            pointer-events: none;
+        }
+
+        @keyframes flash {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* Victory/Defeat Screens */
+        .end-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .end-screen.show {
+            display: flex;
+        }
+
+        .end-content {
+            text-align: center;
+            color: white;
+        }
+
+        .end-content h1 {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .end-content.victory h1 {
+            color: #10b981;
+        }
+
+        .end-content.defeat h1 {
+            color: #dc2626;
+        }
+
+        .end-content p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Phase Indicator */
+        .phase-indicator {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #daa520;
+            border-radius: 20px;
+            padding: 10px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #daa520;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Title Screen -->
+        <div class="title-screen" id="titleScreen">
+            <h1>逆転裁判</h1>
+            <p style="font-size: 1.5rem; margin-bottom: 3rem; color: #daa520;">第1話「初回法廷」</p>
+            <button class="start-button" id="startGame">ゲーム開始</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div class="game-screen" id="gameScreen">
+            <div class="court-background"></div>
+            
+            <!-- Phase Indicator -->
+            <div class="phase-indicator" id="phaseIndicator">捜査フェーズ</div>
+            
+            <!-- Health Bar -->
+            <div class="health-bar">
+                <div class="health-label">信頼度</div>
+                <div class="health-fill" id="healthFill"></div>
+            </div>
+            
+            <!-- Court Record -->
+            <div class="court-record" id="courtRecord">
+                <h3>法廷記録</h3>
+                <div id="evidenceList"></div>
+            </div>
+            
+            <div class="ui-area">
+                <!-- Character Area -->
+                <div class="character-area" id="characterArea">
+                    <div class="character phoenix" id="phoenix">
+                        <div style="font-size: 2rem;">👨‍💼</div>
+                        <div style="font-size: 1rem; margin-top: 10px;">成歩堂龍一</div>
+                        <div class="character-name">主人公 - 弁護士</div>
+                    </div>
+                    
+                    <div class="character judge" id="judge" style="display: none;">
+                        <div style="font-size: 2rem;">👨‍⚖️</div>
+                        <div style="font-size: 1rem; margin-top: 10px;">裁判長</div>
+                        <div class="character-name">裁判官</div>
+                    </div>
+                    
+                    <div class="character prosecutor" id="prosecutor" style="display: none;">
+                        <div style="font-size: 2rem;">⚖️</div>
+                        <div style="font-size: 1rem; margin-top: 10px;">亜内武文</div>
+                        <div class="character-name">検事</div>
+                    </div>
+                    
+                    <div class="character witness" id="witness" style="display: none;">
+                        <div style="font-size: 2rem;">🤵</div>
+                        <div style="font-size: 1rem; margin-top: 10px;">証人</div>
+                        <div class="character-name">目撃者</div>
+                    </div>
+                </div>
+                
+                <!-- Text Box -->
+                <div class="text-box">
+                    <div class="speaker-name" id="speakerName">ナレーション</div>
+                    <div class="dialogue-text" id="dialogueText">ようこそ、逆転裁判の世界へ...</div>
+                    
+                    <div class="controls">
+                        <div class="continue-indicator" id="continueIndicator">▶</div>
+                        
+                        <div class="action-buttons" id="actionButtons" style="display: none;">
+                            <button class="action-btn" id="objectBtn">異議あり！</button>
+                            <button class="action-btn" id="presentBtn">証拠品提示</button>
+                            <button class="action-btn" id="pressBtn">ゆさぶる</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- End Screen -->
+        <div class="end-screen" id="endScreen">
+            <div class="end-content" id="endContent">
+                <h1 id="endTitle">勝利！</h1>
+                <p id="endMessage">見事に真実を明らかにしました！</p>
+                <button class="start-button" onclick="location.reload()">もう一度プレイ</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
