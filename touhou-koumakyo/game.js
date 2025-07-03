@@ -50,6 +50,13 @@ class TouhouGame {
         this.frameCount = 0;
         this.lastTime = 0;
         
+        // Bullet ID generation
+        this.bulletIdCounter = 0;
+        
+        // Object pools for better performance
+        this.bulletElementPool = [];
+        this.maxPoolSize = 500;
+        
         // Spell card system
         this.currentSpell = null;
         this.spellCards = [
@@ -179,71 +186,76 @@ class TouhouGame {
             width: 4,
             height: 12,
             speed: 8,
-            damage: this.player.character === 'marisa' ? 2 : 1
+            damage: this.player.character === 'marisa' ? 2 : 1,
+            id: this.generateBulletId()
         };
         
         this.playerBullets.push(bullet);
         
-        // Create DOM element
-        const bulletElement = document.createElement('div');
+        // Create DOM element using object pool
+        const bulletElement = this.getBulletElement();
         bulletElement.className = 'player-bullet';
         bulletElement.style.left = bullet.x + 'px';
         bulletElement.style.top = bullet.y + 'px';
-        bulletElement.id = `pbullet_${this.playerBullets.length}`;
+        bulletElement.id = `pbullet_${bullet.id}`;
         
         this.gameArea.appendChild(bulletElement);
         
         // Multi-shot for higher power levels
         if (this.power >= 32) {
             // Side shots
-            const leftBullet = {...bullet, x: bullet.x - 12};
-            const rightBullet = {...bullet, x: bullet.x + 12};
+            const leftBullet = {...bullet, x: bullet.x - 12, id: this.generateBulletId()};
+            const rightBullet = {...bullet, x: bullet.x + 12, id: this.generateBulletId()};
             
             this.playerBullets.push(leftBullet, rightBullet);
             
-            [leftBullet, rightBullet].forEach((b, i) => {
-                const el = document.createElement('div');
+            [leftBullet, rightBullet].forEach((b) => {
+                const el = this.getBulletElement();
                 el.className = 'player-bullet';
                 el.style.left = b.x + 'px';
                 el.style.top = b.y + 'px';
-                el.id = `pbullet_${this.playerBullets.length - 1 + i}`;
+                el.id = `pbullet_${b.id}`;
                 this.gameArea.appendChild(el);
             });
         }
         
         if (this.power >= 64) {
             // Diagonal shots
-            const diagLeft = {...bullet, x: bullet.x - 6, speed: 7};
-            const diagRight = {...bullet, x: bullet.x + 6, speed: 7};
+            const diagLeft = {...bullet, x: bullet.x - 6, speed: 7, id: this.generateBulletId()};
+            const diagRight = {...bullet, x: bullet.x + 6, speed: 7, id: this.generateBulletId()};
             
             this.playerBullets.push(diagLeft, diagRight);
             
-            [diagLeft, diagRight].forEach((b, i) => {
-                const el = document.createElement('div');
+            [diagLeft, diagRight].forEach((b) => {
+                const el = this.getBulletElement();
                 el.className = 'player-bullet';
                 el.style.left = b.x + 'px';
                 el.style.top = b.y + 'px';
-                el.id = `pbullet_${this.playerBullets.length - 1 + i}`;
+                el.id = `pbullet_${b.id}`;
                 this.gameArea.appendChild(el);
             });
         }
     }
     
     updatePlayerBullets() {
-        this.playerBullets.forEach((bullet, index) => {
+        for (let i = this.playerBullets.length - 1; i >= 0; i--) {
+            const bullet = this.playerBullets[i];
             bullet.y -= bullet.speed;
             
-            const bulletElement = document.getElementById(`pbullet_${index + 1}`);
+            const bulletElement = document.getElementById(`pbullet_${bullet.id}`);
             if (bulletElement) {
                 bulletElement.style.top = bullet.y + 'px';
                 
                 // Remove if off screen
                 if (bullet.y < -bullet.height) {
-                    bulletElement.remove();
-                    this.playerBullets.splice(index, 1);
+                    this.optimizedRemoveBullet(bulletElement);
+                    this.playerBullets.splice(i, 1);
                 }
+            } else {
+                // Remove bullet if DOM element is missing
+                this.playerBullets.splice(i, 1);
             }
-        });
+        }
     }
     
     spawnBoss() {
@@ -453,26 +465,28 @@ class TouhouGame {
             height: 8,
             vx: vx,
             vy: vy,
-            grazed: false
+            grazed: false,
+            id: this.generateBulletId()
         };
         
         this.enemyBullets.push(bullet);
         
-        const bulletElement = document.createElement('div');
+        const bulletElement = this.getBulletElement();
         bulletElement.className = 'enemy-bullet';
         bulletElement.style.left = bullet.x + 'px';
         bulletElement.style.top = bullet.y + 'px';
-        bulletElement.id = `ebullet_${this.enemyBullets.length}`;
+        bulletElement.id = `ebullet_${bullet.id}`;
         
         this.gameArea.appendChild(bulletElement);
     }
     
     updateEnemyBullets() {
-        this.enemyBullets.forEach((bullet, index) => {
+        for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
+            const bullet = this.enemyBullets[i];
             bullet.x += bullet.vx;
             bullet.y += bullet.vy;
             
-            const bulletElement = document.getElementById(`ebullet_${index + 1}`);
+            const bulletElement = document.getElementById(`ebullet_${bullet.id}`);
             if (bulletElement) {
                 bulletElement.style.left = bullet.x + 'px';
                 bulletElement.style.top = bullet.y + 'px';
@@ -480,36 +494,41 @@ class TouhouGame {
                 // Remove if off screen
                 if (bullet.x < -20 || bullet.x > this.gameWidth + 20 || 
                     bullet.y < -20 || bullet.y > this.gameHeight + 20) {
-                    bulletElement.remove();
-                    this.enemyBullets.splice(index, 1);
+                    this.optimizedRemoveBullet(bulletElement);
+                    this.enemyBullets.splice(i, 1);
                 }
+            } else {
+                // Remove bullet if DOM element is missing
+                this.enemyBullets.splice(i, 1);
             }
-        });
+        }
     }
     
     checkCollisions() {
         // Player bullets vs Boss
         if (this.boss) {
-            this.playerBullets.forEach((bullet, bulletIndex) => {
+            for (let i = this.playerBullets.length - 1; i >= 0; i--) {
+                const bullet = this.playerBullets[i];
                 if (this.isColliding(bullet, this.boss)) {
                     // Damage boss
                     this.boss.hp -= bullet.damage;
                     this.boss.hitFlash = 3;
                     
                     // Remove bullet
-                    const bulletElement = document.getElementById(`pbullet_${bulletIndex + 1}`);
-                    if (bulletElement) bulletElement.remove();
-                    this.playerBullets.splice(bulletIndex, 1);
+                    const bulletElement = document.getElementById(`pbullet_${bullet.id}`);
+                    if (bulletElement) this.optimizedRemoveBullet(bulletElement);
+                    this.playerBullets.splice(i, 1);
                     
                     this.addScore(10);
                     this.updateUI();
                 }
-            });
+            }
         }
         
         // Enemy bullets vs Player
         if (!this.player.invulnerable) {
-            this.enemyBullets.forEach((bullet, index) => {
+            for (let i = 0; i < this.enemyBullets.length; i++) {
+                const bullet = this.enemyBullets[i];
                 const distance = this.getDistance(
                     bullet.x + bullet.width / 2,
                     bullet.y + bullet.height / 2,
@@ -530,7 +549,7 @@ class TouhouGame {
                     this.hitPlayer();
                     return;
                 }
-            });
+            }
         }
     }
     
@@ -609,16 +628,16 @@ class TouhouGame {
     }
     
     clearEnemyBullets() {
-        this.enemyBullets.forEach((bullet, index) => {
-            const bulletElement = document.getElementById(`ebullet_${index + 1}`);
-            if (bulletElement) bulletElement.remove();
+        this.enemyBullets.forEach((bullet) => {
+            const bulletElement = document.getElementById(`ebullet_${bullet.id}`);
+            if (bulletElement) this.optimizedRemoveBullet(bulletElement);
         });
         this.enemyBullets = [];
     }
     
     clearSomeEnemyBullets() {
         // Clear bullets near player
-        this.enemyBullets = this.enemyBullets.filter((bullet, index) => {
+        this.enemyBullets = this.enemyBullets.filter((bullet) => {
             const distance = this.getDistance(
                 bullet.x,
                 bullet.y,
@@ -627,8 +646,8 @@ class TouhouGame {
             );
             
             if (distance < 100) {
-                const bulletElement = document.getElementById(`ebullet_${index + 1}`);
-                if (bulletElement) bulletElement.remove();
+                const bulletElement = document.getElementById(`ebullet_${bullet.id}`);
+                if (bulletElement) this.optimizedRemoveBullet(bulletElement);
                 return false;
             }
             return true;
@@ -701,6 +720,34 @@ class TouhouGame {
         const dx = x2 - x1;
         const dy = y2 - y1;
         return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    generateBulletId() {
+        return ++this.bulletIdCounter;
+    }
+    
+    // Object pooling methods for better performance
+    getBulletElement() {
+        if (this.bulletElementPool.length > 0) {
+            return this.bulletElementPool.pop();
+        }
+        return document.createElement('div');
+    }
+    
+    returnBulletElement(element) {
+        if (this.bulletElementPool.length < this.maxPoolSize) {
+            element.className = '';
+            element.style.cssText = '';
+            element.id = '';
+            this.bulletElementPool.push(element);
+        }
+    }
+    
+    optimizedRemoveBullet(element) {
+        if (element && element.parentNode) {
+            element.parentNode.removeChild(element);
+            this.returnBulletElement(element);
+        }
     }
     
     updateUI() {
